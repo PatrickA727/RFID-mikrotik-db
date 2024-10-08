@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS sold_items (
+    id SERIAL PRIMARY KEY,
+    item_id INT NOT NULL UNIQUE,
+    datetime_sold TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    invoice VARCHAR(255) NOT NULL UNIQUE,
+    payment_method VARCHAR(155) NOT NULL,
+    payment_status VARCHAR(155) NOT NULL
+);
