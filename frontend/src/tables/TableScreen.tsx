@@ -34,10 +34,15 @@ const TableScreen = () => {
         placeholderData: keepPreviousData,
     });
 
+    console.log(data)
+
     const totalRecords: number = data?.item_count ?? 0;
     const canPrevPage: boolean = page > 1;
     const canNextPage: boolean = totalRecords > limit * page;
-    const totalPages: number = Math.ceil(totalRecords / limit);
+    let totalPages: number = Math.ceil(totalRecords / limit);
+    if (totalPages < 1) {
+        totalPages = 1
+    }
 
     const columnHelper = createColumnHelper<Item>()
 

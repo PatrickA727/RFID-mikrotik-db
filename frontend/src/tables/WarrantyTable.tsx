@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createColumnHelper, flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table"
 import { Button, ButtonGroup, Text } from "@chakra-ui/react";
 import { useState } from "react";
@@ -17,14 +17,33 @@ interface Warranty {
 
 const WarrantyTable = () => {
     const [globalFilter, setGlobalFilter] = useState("")
+    const [page, setPage] = useState(1)
+    const [search, setSearch] = useState("") 
 
-    const {data: warranties, error, isError, isLoading} = useQuery<Warranty[]>({
-        queryKey: ["warranty"],
-        queryFn: async(): Promise<Warranty[]> => {
-            const { data } = await axios.get<Warranty[]>(`/api/item/get-warranties?limit=100&offset=0&search=`);
-            return data
-        }
+    const limit: number = 10
+    let offset: number = 0
+
+    if (page > 1) {
+        offset = (page - 1) * limit
+    }
+
+    const {data, error, isError, isLoading} = useQuery<{ warranties: Warranty[], item_count: number }>({
+        queryKey: ["warranty", offset, search],
+        queryFn: async(): Promise<{ warranties: Warranty[], item_count: number }> => {
+            const { data } = await axios.get<{ warranties: Warranty[], item_count: number }>(`/api/item/get-warranties?limit=${limit}&offset=${offset}&search=${search}`);
+            return data;
+        },
+        placeholderData: keepPreviousData,
     });
+
+    const totalRecords: number = data?.item_count ?? 0;
+    const canPrevPage: boolean = page > 1;
+    const canNextPage: boolean = totalRecords > limit * page;
+    let totalPages: number = Math.ceil(totalRecords / limit);
+    if (totalPages < 1) {
+        totalPages = 1
+    }
+
 
     const columnHelper = createColumnHelper<Warranty>()
 
@@ -96,17 +115,15 @@ const WarrantyTable = () => {
         }),
     ]
 
+    const warranties = data?.warranties ?? [];
+
     const table = useReactTable({
-        data: warranties || [],
+        data: warranties,
         columns,
         state: {
             globalFilter
         },
-        getPaginationRowModel: getPaginationRowModel(),
         getCoreRowModel: getCoreRowModel(),
-
-        onGlobalFilterChange: setGlobalFilter,
-        getFilteredRowModel: getFilteredRowModel(),
     })
 
     if (isLoading) {
@@ -121,7 +138,7 @@ const WarrantyTable = () => {
         <div className="flex flex-col min-h-screen max-w-6xl mx-auto py-2 px-4 sm:px-6 lg:px-5">
 
             <div className="mb-4 relative">
-                <input value={globalFilter ?? ""} onChange={(e) => setGlobalFilter(e.target.value)} placeholder="Search..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-gray-300 focus:border-gray-300 focus:outline-none"/>
+                <input value={search ?? ""} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-gray-300 focus:border-gray-300 focus:outline-none"/>
             </div>
 
             <div className="overflow-x-auto bg-white shadow-md rounded-lg">
@@ -159,14 +176,14 @@ const WarrantyTable = () => {
             </div>
 
             <Text mb={2} className="mt-2">
-                Page {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
+                Page {page} of{" "}
+                {totalPages}
             </Text>
             <ButtonGroup size="sm" isAttached variant="outline">
-                <Button onClick={() => table.previousPage()} isDisabled={!table.getCanPreviousPage()} className="mr-1 p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50">
+                <Button onClick={() => setPage(page - 1)} isDisabled={!canPrevPage} className="mr-1 p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50">
                     {"<"}
                 </Button>
-                <Button onClick={() => table.nextPage()} isDisabled={!table.getCanNextPage()} className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50">
+                <Button onClick={() => setPage(page + 1)} isDisabled={!canNextPage} className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50">
                     {">"}
                 </Button>
             </ButtonGroup>
