@@ -190,12 +190,16 @@ func (s *Store) GetWarrantyByItemId(item_id int) (*types.Warranty, error) {
 	return &warranty, nil
 }
 
-func (s *Store) GetAllWarranty(limit int, offset int, search string) ([]types.Warranty, error) {
-
+func (s *Store) GetAllWarranty(limit int, offset int, search string) ([]types.Warranty, int, error) {
 	var (
 		 rows *sql.Rows
 		 err error
 	)
+
+	warrantyCount, err := s.GetWarrantyCount(search)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	if search != "" {
 
@@ -214,13 +218,13 @@ func (s *Store) GetAllWarranty(limit int, offset int, search string) ([]types.Wa
 			 LIMIT $2 OFFSET $3`, searchPattern, limit, offset,
 		)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 	} else {
 		rows, err = s.db.QueryContext(context.Background(), 
 		   "SELECT w.id, w.item_id, w.purchase_date, w.expiration, w.cust_name, w.cust_email, w.cust_phone, i.serial_number FROM warranty w JOIN items i ON w.item_id = i.id  ORDER BY id ASC LIMIT $1 OFFSET $2", limit, offset)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 	}
 
@@ -231,17 +235,46 @@ func (s *Store) GetAllWarranty(limit int, offset int, search string) ([]types.Wa
 		var warranty types.Warranty
 
 		if err := rows.Scan(&warranty.ID, &warranty.ItemID, &warranty.PurchaseDate, &warranty.Expiration, &warranty.CustName, &warranty.CustEmail, &warranty.CustPhone, &warranty.ItemSN); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		warranties = append(warranties, warranty)
 	}
 
 	if err = rows.Err(); err != nil {
-        return nil, err
+        return nil, 0, err
     }
 
-	return warranties, nil
+	return warranties, warrantyCount, nil
+}
+
+func (s *Store) GetWarrantyCount(search string) (int, error) {
+	warrantyCount := 0
+	if (search == "") {
+		err := s.db.QueryRowContext(context.Background(), 
+		"SELECT COUNT(*) FROM warranty", 
+	).Scan(&warrantyCount)
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		searchPattern := "%" + search + "%"
+
+		err := s.db.QueryRowContext(context.Background(), 
+		`SELECT COUNT(*) FROM warranty w 
+				JOIN items i ON w.item_id = i.id 
+				WHERE w.cust_name ILIKE $1 
+				OR w.cust_email ILIKE $1 
+				OR w.purchase_date::text ILIKE $1 
+				OR w.expiration::text ILIKE $1 
+				OR i.serial_number ILIKE $1`, searchPattern, 
+	).Scan(&warrantyCount)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return warrantyCount, nil
 }
 
 func (s *Store) NewItemSold(sold_item types.SoldItem, ctx context.Context) error {

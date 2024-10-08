@@ -204,7 +204,7 @@ func (h *Handler) handleGetAllWarranties(w http.ResponseWriter, r *http.Request)
     }
 
 	// Get warranties
-	warranties, err := h.store.GetAllWarranty(limit, offset, searchQuery)
+	warranties, warrantyCount, err := h.store.GetAllWarranty(limit, offset, searchQuery)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error getting warranties: %v", err))
 		return
@@ -215,7 +215,12 @@ func (h *Handler) handleGetAllWarranties(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, warranties)
+	response := types.WarrantyResponse {
+		Warranties: warranties,
+		WarrantyCount: warrantyCount,
+	}
+
+	utils.WriteJSON(w, http.StatusOK, response)
 }
 
 func (h *Handler) handleItemSold(w http.ResponseWriter, r *http.Request) {
