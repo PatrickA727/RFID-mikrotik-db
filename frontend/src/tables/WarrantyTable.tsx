@@ -13,8 +13,6 @@ interface Warranty {
     cust_phone: string
 }
 
-
-
 const WarrantyTable = () => {
     const [globalFilter, setGlobalFilter] = useState("")
     const [page, setPage] = useState(1)
@@ -27,16 +25,16 @@ const WarrantyTable = () => {
         offset = (page - 1) * limit
     }
 
-    const {data, error, isError, isLoading} = useQuery<{ warranties: Warranty[], item_count: number }>({
+    const {data, error, isError, isLoading} = useQuery<{ warranties: Warranty[], warranty_count: number }>({
         queryKey: ["warranty", offset, search],
-        queryFn: async(): Promise<{ warranties: Warranty[], item_count: number }> => {
-            const { data } = await axios.get<{ warranties: Warranty[], item_count: number }>(`/api/item/get-warranties?limit=${limit}&offset=${offset}&search=${search}`);
+        queryFn: async(): Promise<{ warranties: Warranty[], warranty_count: number }> => {
+            const { data } = await axios.get<{ warranties: Warranty[], warranty_count: number }>(`/api/item/get-warranties?limit=${limit}&offset=${offset}&search=${search}`);
             return data;
         },
         placeholderData: keepPreviousData,
     });
 
-    const totalRecords: number = data?.item_count ?? 0;
+    const totalRecords: number = data?.warranty_count ?? 0;
     const canPrevPage: boolean = page > 1;
     const canNextPage: boolean = totalRecords > limit * page;
     let totalPages: number = Math.ceil(totalRecords / limit);

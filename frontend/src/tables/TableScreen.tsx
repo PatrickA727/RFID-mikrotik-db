@@ -34,8 +34,6 @@ const TableScreen = () => {
         placeholderData: keepPreviousData,
     });
 
-    console.log(data)
-
     const totalRecords: number = data?.item_count ?? 0;
     const canPrevPage: boolean = page > 1;
     const canNextPage: boolean = totalRecords > limit * page;
