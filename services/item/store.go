@@ -311,11 +311,16 @@ func (s *Store) NewItemSold(sold_item types.SoldItem, ctx context.Context) error
 	return nil
 }
 
-func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.SoldItem, error) {
+func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.SoldItem, int, error) {
 	var (
 		rows *sql.Rows
 		err error
    )
+
+   soldItemsCount, err := s.GetSoldItemsCount(search)
+   if err != nil {
+	return nil, 0, err
+   }
 
    if search != "" {
 
@@ -333,7 +338,7 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 			LIMIT $2 OFFSET $3`, searchPattern, limit, offset,
 	   )
 	   if err != nil {
-		   return nil, err
+		   return nil, 0, err
 	   }
    } else {
 	   rows, err = s.db.QueryContext(context.Background(), 
@@ -341,7 +346,7 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 		  FROM sold_items s JOIN items i ON s.item_id = i.id 
 		  ORDER BY id ASC LIMIT $1 OFFSET $2`, limit, offset)
 	   if err != nil {
-		   return nil, err
+		   return nil, 0, err
 	   }
    }
 
@@ -352,15 +357,44 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 		var soldItem types.SoldItem
 
 		if err := rows.Scan(&soldItem.ID, &soldItem.ItemID, &soldItem.DatetimeSold, &soldItem.Invoice, &soldItem.PaymentMethod, &soldItem.PaymentStatus, &soldItem.ItemSN); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		soldItems = append(soldItems, soldItem)
 	}
 
 	if err = rows.Err(); err != nil {
-        return nil, err
+        return nil, 0, err
     }
 
-	return soldItems, nil
+	return soldItems, soldItemsCount, nil
+}
+
+func (s *Store) GetSoldItemsCount (search string) (int, error) {
+	soldItemsCount := 0
+
+	if (search == "") {
+		err := s.db.QueryRowContext(context.Background(), 
+		"SELECT COUNT(*) FROM sold_items", 
+	).Scan(&soldItemsCount)
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		searchPattern := "%" + search + "%"
+
+		err := s.db.QueryRowContext(context.Background(), 
+		`SELECT COUNT(*) FROM sold_items s 
+			   JOIN items i ON s.item_id = i.id 
+			   WHERE s.datetime_sold::text ILIKE $1 
+			   OR s.invoice ILIKE $1 
+			   OR s.payment_status ILIKE $1 
+			   OR i.serial_number ILIKE $1`, searchPattern, 
+	).Scan(&soldItemsCount)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return soldItemsCount, nil
 }

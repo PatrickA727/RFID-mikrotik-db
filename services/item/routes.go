@@ -284,7 +284,7 @@ func (h *Handler) handleGetAllSoldItem (w http.ResponseWriter, r *http.Request) 
     }
 	
 	// Get sold items
-	soldItems, err := h.store.GetAllSoldItems(limit, offset, searchQuery)
+	soldItems, soldItemsCount, err := h.store.GetAllSoldItems(limit, offset, searchQuery)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error getting sold items: %v", err))
 		return
@@ -294,5 +294,10 @@ func (h *Handler) handleGetAllSoldItem (w http.ResponseWriter, r *http.Request) 
 		utils.WriteJSON(w, http.StatusOK, []types.SoldItem{})
 	}
 
-	utils.WriteJSON(w, http.StatusOK, soldItems)
+	response := types.SoldItemsResponse {
+		SoldItems: soldItems,
+		SoldItemsCount: soldItemsCount,
+	}
+
+	utils.WriteJSON(w, http.StatusOK, response)
 }

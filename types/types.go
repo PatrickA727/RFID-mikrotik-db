@@ -18,7 +18,8 @@ type ItemStore interface {
 	NewItemSold(sold_item SoldItem, ctx context.Context) error
 	GetItemCount(search string) (int, error)
 	GetWarrantyCount(search string) (int, error)
-	GetAllSoldItems(limit int, offset int, search string) ([]SoldItem, error)
+	GetSoldItemsCount (search string) (int, error)
+	GetAllSoldItems(limit int, offset int, search string) ([]SoldItem, int, error)
 }
 
 type Item struct {
@@ -40,6 +41,11 @@ type WarrantyResponse struct {
 	Warranties     []Warranty `json:"warranties"`
 	WarrantyCount int    `json:"warranty_count"`
 } 
+
+type SoldItemsResponse struct {
+	SoldItems 		[]SoldItem	`json:"sold_items"`
+	SoldItemsCount	int			`json:"sold_items_count"`	
+}
 
 type Warranty struct {
 	ID			int	`json:"id"`
