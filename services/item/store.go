@@ -28,7 +28,7 @@ func (s *Store) BeginTransaction(ctx context.Context) (*sql.Tx, error) {
 }
 
 func (s *Store) CreateItem(item types.Item) error {
-	_, err := s.db.Exec("INSERT INTO items (serial_number, rfid_tag, item_name, price) VALUES ($1, $2, $3, $4)", item.SerialNumber, item.RFIDTag, item.ItemName, item.Price)
+	_, err := s.db.Exec("INSERT INTO items (serial_number, rfid_tag, item_name) VALUES ($1, $2, $3)", item.SerialNumber, item.RFIDTag, item.ItemName)
 	if err != nil {
 		return err
 	}
@@ -39,8 +39,8 @@ func (s *Store) CreateItem(item types.Item) error {
 func (s *Store) GetItemByRFIDTag(rfid_tag string) (*types.Item, error) {
 	var item types.Item
 
-	err := s.db.QueryRow("SELECT id, serial_number, rfid_tag, item_name, price FROM items WHERE rfid_tag = $1", rfid_tag).Scan(
-		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, &item.Price,
+	err := s.db.QueryRow("SELECT id, serial_number, rfid_tag, item_name FROM items WHERE rfid_tag = $1", rfid_tag).Scan(
+		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, 
 	)
 	if err != nil {
 		return nil, err
@@ -52,8 +52,8 @@ func (s *Store) GetItemByRFIDTag(rfid_tag string) (*types.Item, error) {
 func (s *Store) GetItemById(item_id int) (*types.Item, error) {
 	var item types.Item
 
-	err := s.db.QueryRow("SELECT id, serial_number, rfid_tag, item_name, price FROM items WHERE id = $1", item_id).Scan(
-		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, &item.Price,
+	err := s.db.QueryRow("SELECT id, serial_number, rfid_tag, item_name FROM items WHERE id = $1", item_id).Scan(
+		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName,
 	)
 	if err != nil {
 		return nil, err
@@ -78,13 +78,13 @@ func (s *Store) GetItems(limit int, offset int, search string) ([]types.Item ,in
 		searchPattern := "%" + search + "%"
 
 		rows, err = s.db.QueryContext(context.Background(), 
-			"SELECT id, serial_number, rfid_tag, item_name, price, warranty, sold FROM items WHERE serial_number ILIKE $1 OR rfid_tag ILIKE $1 OR item_name ILIKE $1 ORDER BY id ASC LIMIT $2 OFFSET $3", searchPattern, limit, offset,
+			"SELECT id, serial_number, rfid_tag, item_name, warranty, sold, modal, keuntungan, quantity, createdat FROM items WHERE serial_number ILIKE $1 OR rfid_tag ILIKE $1 OR item_name ILIKE $1 ORDER BY batch DESC LIMIT $2 OFFSET $3", searchPattern, limit, offset,
 		)
 		if err != nil {
 			return nil, 0, err
 		}
 	} else {
-		rows, err = s.db.QueryContext(context.Background(), "SELECT id, serial_number, rfid_tag, item_name, price, warranty, sold FROM items ORDER BY id ASC LIMIT $1 OFFSET $2", limit, offset)
+		rows, err = s.db.QueryContext(context.Background(), "SELECT id, serial_number, rfid_tag, item_name, warranty, sold, modal, keuntungan, quantity, batch, createdat FROM items ORDER BY batch DESC LIMIT $1 OFFSET $2", limit, offset)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -97,7 +97,7 @@ func (s *Store) GetItems(limit int, offset int, search string) ([]types.Item ,in
 	for rows.Next() {
 		var item types.Item
 
-		if err := rows.Scan(&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, &item.Price, &item.Warranty, &item.Sold); err != nil {
+		if err := rows.Scan(&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, &item.Warranty, &item.Sold, &item.Modal, &item.Keuntungan, &item.Quantity, &item.Batch, &item.CreatedAt); err != nil {
 			return nil, 0, err
 		}
 

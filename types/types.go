@@ -27,9 +27,13 @@ type Item struct {
 	SerialNumber string    `json:"serial_number"`
 	RFIDTag      string `json:"rfid_tag"`
 	ItemName     string `json:"item_name"`
-	Price		 int	`json:"price"`
 	Warranty	 string `json:"warranty"`
 	Sold 		 bool	`json:"sold"`
+	Modal		 int 	`json:"modal"`
+	Keuntungan	 int 	`json:"keuntungan"`
+	Quantity	 int 	`json:"quantity"`
+	Batch		 int	`json:"batch"`
+	CreatedAt	 time.Time	`json:"createdat"`	
 }
 
 type ItemsResponse struct {
@@ -72,7 +76,6 @@ type RegisterItemPayload struct {
 	SerialNumber string    `json:"serial_number" validate:"required"`
 	RFIDTag      string `json:"rfid_tag" validate:"required"`
 	ItemName     string `json:"item_name" validate:"required"`
-	Price		 int	`json:"price" validate:"required"`
 }
 
 type NewWarrantyPayload struct {

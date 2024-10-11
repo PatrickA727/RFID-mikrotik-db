@@ -1,0 +1,5 @@
+ALTER TABLE items 
+ADD COLUMN modal BIGINT,
+ADD COLUMN keuntungan BIGINT, 
+ADD COLUMN quantity INT,
+DROP COLUMN price;

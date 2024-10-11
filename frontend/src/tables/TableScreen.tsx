@@ -8,9 +8,13 @@ interface Item {
   serial_number: number,
   rfid_tag: string,
   item_name: string,
-  price: number,
   warranty: string,
-  sold: boolean
+  sold: boolean,
+  modal: number,
+  keuntungan: number,
+  quantity: number,
+  batch: number,
+  createdat: Date,
 }
 
 const TableScreen = () => {
@@ -45,6 +49,28 @@ const TableScreen = () => {
     const columnHelper = createColumnHelper<Item>()
 
     const columns = [
+        columnHelper.accessor("batch", {
+            cell: (info) => (
+                info.getValue()
+            ),
+            header: () => (
+                <span className="flex items-center">
+                    Batch
+                </span>
+            )
+        }),
+
+        columnHelper.accessor("createdat", {
+            cell: (info) => (
+                info.getValue()
+            ),
+            header: () => (
+                <span className="flex items-center">
+                    Date In
+                </span>
+            )
+        }),
+
         columnHelper.accessor("serial_number", {
             cell: (info) => (
                 info.getValue()
@@ -78,17 +104,6 @@ const TableScreen = () => {
             )
         }),
 
-        columnHelper.accessor("price", {
-            cell: (info) => (
-                info.getValue()
-            ),
-            header: () => (
-                <span className="flex items-center">
-                    Price
-                </span>
-            )
-        }),
-
         columnHelper.accessor("warranty", {
             cell: (info) => (
                 info.getValue()
@@ -105,6 +120,39 @@ const TableScreen = () => {
             header: () => (
                 <span className="flex items-center">
                     Sold
+                </span>
+            )
+        }),
+
+        columnHelper.accessor("modal", {
+            cell: (info) => (
+                info.getValue()
+            ),
+            header: () => (
+                <span className="flex items-center">
+                    Modal
+                </span>
+            )
+        }),
+
+        columnHelper.accessor("keuntungan", {
+            cell: (info) => (
+                info.getValue()
+            ),
+            header: () => (
+                <span className="flex items-center">
+                    Keuntungan
+                </span>
+            )
+        }),
+
+        columnHelper.accessor("quantity", {
+            cell: (info) => (
+                info.getValue()
+            ),
+            header: () => (
+                <span className="flex items-center">
+                    Quantity
                 </span>
             )
         }),

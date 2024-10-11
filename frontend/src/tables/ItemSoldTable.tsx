@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { createColumnHelper, flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table"
+import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Button, ButtonGroup, Text } from "@chakra-ui/react";
 import { useState } from "react";
 

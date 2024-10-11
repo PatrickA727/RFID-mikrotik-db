@@ -53,7 +53,6 @@ func (h *Handler) handleRegisterItem(w http.ResponseWriter, r *http.Request) {
 		SerialNumber: payload.SerialNumber,
 		RFIDTag: payload.RFIDTag,
 		ItemName: payload.ItemName,
-		Price: payload.Price,
 	})
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error creating item %v", err))
