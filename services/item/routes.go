@@ -254,7 +254,7 @@ func (h *Handler) handleItemSold(w http.ResponseWriter, r *http.Request) {
 	err = h.store.NewItemSold(types.SoldItem{
 		ItemID: i.ID,
 		Invoice: payload.Invoice,
-		PaymentMethod: payload.PaymentMethod,
+		OnlineShop: payload.OnlineShop,
 		PaymentStatus: payload.PaymentStatus,
 	}, ctx)
 	if err != nil {

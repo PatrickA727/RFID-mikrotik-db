@@ -296,8 +296,8 @@ func (s *Store) NewItemSold(sold_item types.SoldItem, ctx context.Context) error
 	}()
 
 	_, err = tx.ExecContext(ctx,
-		"INSERT INTO sold_items (item_id, invoice, payment_method, payment_status) VALUES ($1, $2, $3, $4)",
-			sold_item.ItemID, sold_item.Invoice, sold_item.PaymentMethod, sold_item.PaymentStatus,
+		"INSERT INTO sold_items (item_id, invoice, ol_shop, payment_status) VALUES ($1, $2, $3, $4)",
+			sold_item.ItemID, sold_item.Invoice, sold_item.OnlineShop, sold_item.PaymentStatus,
 		)
 	if err != nil {
 		return err
@@ -327,14 +327,15 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 	   searchPattern := "%" + search + "%"
 
 	   rows, err = s.db.QueryContext(context.Background(), 
-		   `SELECT s.id, s.item_id, s.datetime_sold, s.invoice, s.payment_method, s.payment_status, i.serial_number 
+		   `SELECT s.id, s.item_id, s.datetime_sold, s.invoice, s.ol_shop, s.payment_status, s.journal, i.serial_number 
 			   FROM sold_items s 
 			   JOIN items i ON s.item_id = i.id 
 			   WHERE s.datetime_sold::text ILIKE $1 
 			   OR s.invoice ILIKE $1 
 			   OR s.payment_status ILIKE $1 
+			   OR s.ol_shop ILIKE $1
 			   OR i.serial_number ILIKE $1 
-			   ORDER BY s.id ASC 
+			   ORDER BY s.id DESC 
 			LIMIT $2 OFFSET $3`, searchPattern, limit, offset,
 	   )
 	   if err != nil {
@@ -342,9 +343,9 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 	   }
    } else {
 	   rows, err = s.db.QueryContext(context.Background(), 
-	      `SELECT s.id, s.item_id, s.datetime_sold, s.invoice, s.payment_method, s.payment_status, i.serial_number 
+	      `SELECT s.id, s.item_id, s.datetime_sold, s.invoice, s.ol_shop, s.payment_status, s.journal, i.serial_number 
 		  FROM sold_items s JOIN items i ON s.item_id = i.id 
-		  ORDER BY id ASC LIMIT $1 OFFSET $2`, limit, offset)
+		  ORDER BY id DESC LIMIT $1 OFFSET $2`, limit, offset)
 	   if err != nil {
 		   return nil, 0, err
 	   }
@@ -356,7 +357,7 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 	for rows.Next() {
 		var soldItem types.SoldItem
 
-		if err := rows.Scan(&soldItem.ID, &soldItem.ItemID, &soldItem.DatetimeSold, &soldItem.Invoice, &soldItem.PaymentMethod, &soldItem.PaymentStatus, &soldItem.ItemSN); err != nil {
+		if err := rows.Scan(&soldItem.ID, &soldItem.ItemID, &soldItem.DatetimeSold, &soldItem.Invoice, &soldItem.OnlineShop, &soldItem.PaymentStatus, &soldItem.Journal, &soldItem.ItemSN); err != nil {
 			return nil, 0, err
 		}
 

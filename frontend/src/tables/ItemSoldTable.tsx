@@ -8,8 +8,9 @@ interface ItemSold {
     item_sn: number,
     datetime_sold: Date,
     invoice: string,
-    payment_method: string,
+    ol_shop: string,
     payment_status: string,
+    journal: boolean
 }
 
 const ItemSoldTable = () => {
@@ -77,13 +78,13 @@ const ItemSoldTable = () => {
             )
         }),
 
-        columnHelper.accessor("payment_method", {
+        columnHelper.accessor("ol_shop", {
             cell: (info) => (
                 info.getValue()
             ),
             header: () => (
                 <span className="flex items-center">
-                    Payment Method
+                    OL Shop
                 </span>
             )
         }),
@@ -95,6 +96,15 @@ const ItemSoldTable = () => {
             header: () => (
                 <span className="flex items-center">
                     Payment Status
+                </span>
+            )
+        }),
+
+        columnHelper.accessor("journal", {
+            cell: (info) => (info.getValue() ? 'Sent' : 'Not sent'),
+            header: () => (
+                <span className="flex items-center">
+                    Journal
                 </span>
             )
         }),

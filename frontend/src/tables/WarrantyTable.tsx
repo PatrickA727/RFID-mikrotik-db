@@ -63,7 +63,7 @@ const WarrantyTable = () => {
             ),
             header: () => (
                 <span className="flex items-center">
-                    Purchase Date
+                    Warranty Start
                 </span>
             )
         }),

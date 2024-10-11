@@ -68,8 +68,9 @@ type SoldItem struct {
 	ItemSN			string		`json:"item_sn"`
 	DatetimeSold	time.Time 	`json:"datetime_sold"`
 	Invoice			string		`json:"invoice"`
-	PaymentMethod	string		`json:"payment_method"`
+	OnlineShop		string		`json:"ol_shop"`
 	PaymentStatus	string		`json:"payment_status"`
+	Journal			bool 		`json:"journal"`
 }
 
 type RegisterItemPayload struct {
@@ -91,6 +92,6 @@ type GetItemAndWarrantyPayload struct {
 
 type SoldItemPayload struct {
 	Invoice			string		`json:"invoice" validate:"required"`
-	PaymentMethod	string		`json:"payment_method" validate:"required"`
+	OnlineShop	string			`json:"ol_shop" validate:"required"`
 	PaymentStatus	string		`json:"payment_status" validate:"required"`
 }
