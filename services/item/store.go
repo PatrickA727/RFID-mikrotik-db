@@ -296,8 +296,8 @@ func (s *Store) NewItemSold(sold_item types.SoldItem, ctx context.Context) error
 	}()
 
 	_, err = tx.ExecContext(ctx,
-		"INSERT INTO sold_items (item_id, invoice, ol_shop, payment_status) VALUES ($1, $2, $3, $4)",
-			sold_item.ItemID, sold_item.Invoice, sold_item.OnlineShop, sold_item.PaymentStatus,
+		"INSERT INTO sold_items (item_id, invoice, ol_shop) VALUES ($1, $2, $3)",
+			sold_item.ItemID, sold_item.Invoice, sold_item.OnlineShop,
 		)
 	if err != nil {
 		return err
@@ -307,6 +307,15 @@ func (s *Store) NewItemSold(sold_item types.SoldItem, ctx context.Context) error
 	if err != nil {
 		return err
 	} 
+
+	return nil
+}
+
+func (s *Store) UpdateItemSold(updated_solditem types.SoldItem) error {
+	_, err := s.db.Exec("UPDATE sold_items SET payment_status = $1, journal = $2 WHERE id = $3", updated_solditem.PaymentStatus, updated_solditem.Journal, updated_solditem.ID)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -30,6 +30,8 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/get-items", h.handleGetItems).Methods("GET")
 	router.HandleFunc("/get-warranties", h.handleGetAllWarranties).Methods("GET")
 	router.HandleFunc("/get-sold-items", h.handleGetAllSoldItem).Methods("GET")
+	router.HandleFunc("/item-sold-bulk", h.handleItemSoldBulk).Methods("POST")
+	router.HandleFunc("/edit-item-sold", h.handleUpdateSoldItem).Methods("PATCH")
 }
 
 func (h *Handler) handleRegisterItem(w http.ResponseWriter, r *http.Request) {
@@ -230,9 +232,9 @@ func (h *Handler) handleItemSold(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Get JSON payload
-	var payload types.SoldItemPayload
+	var payload types.SoldItemPayload 
 	if err := utils.ParseJSON(r, &payload); err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("JSON parsing error"))
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("JSON parsing error: %v", err))
 		return
 	}
 
@@ -255,7 +257,6 @@ func (h *Handler) handleItemSold(w http.ResponseWriter, r *http.Request) {
 		ItemID: i.ID,
 		Invoice: payload.Invoice,
 		OnlineShop: payload.OnlineShop,
-		PaymentStatus: payload.PaymentStatus,
 	}, ctx)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error registering sold item: %v", err))
@@ -263,6 +264,73 @@ func (h *Handler) handleItemSold(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusCreated, "Sold item registered")
+}
+
+func (h *Handler) handleItemSoldBulk (w http.ResponseWriter, r *http.Request) {
+	// Get JSON payload
+	var payload types.SoldItemBulkPayload
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("parsing error: %v", err))
+		return
+	}
+
+	ctx := r.Context()
+
+	// Validate JSON
+	if err := utils.Validate.Struct(payload); err != nil {
+		errors := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
+		return
+	}
+
+	// Get and register items
+	for _, itemTag := range payload.ItemTags {
+		i, err := h.store.GetItemByRFIDTag(itemTag)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error getting items: %v", err))
+		}
+
+		err = h.store.NewItemSold(types.SoldItem{
+			ItemID: i.ID,
+			Invoice: payload.Invoice,
+			OnlineShop: payload.OnlineShop,
+		}, ctx)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error bulk registering sold items: %v", err))
+		}
+	}
+
+	utils.WriteJSON(w, http.StatusCreated, "Sold items registered in bulk")
+}
+
+func (h *Handler) handleUpdateSoldItem (w http.ResponseWriter, r *http.Request) {
+	// Get JSON payload
+	var payload types.SoldItem
+	err := utils.ParseJSON(r, &payload) 
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error parsing JSON: %v", err))
+		return
+	}
+
+	// Validate JSON
+	if err := utils.Validate.Struct(payload); err != nil {
+		errors := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error validating payload: %v", errors))
+		return
+	}
+
+	// Update item sold record by id
+	err = h.store.UpdateItemSold(types.SoldItem{
+		PaymentStatus: payload.PaymentStatus,
+		Journal: payload.Journal,
+		ID: payload.ID,
+	})
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error updating item: %v", err))
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusCreated, "Sold item updated")
 }
 
 func (h *Handler) handleGetAllSoldItem (w http.ResponseWriter, r *http.Request) {

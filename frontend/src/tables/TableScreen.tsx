@@ -38,6 +38,34 @@ const TableScreen = () => {
         placeholderData: keepPreviousData,
     });
 
+    // const updateItem = async (updatedItem: Item): Promise<Item | null> => {
+    //     try {
+    //         const response = await axios.patch<Item>(
+    //             "/api/item/edit-item-sold", 
+    //             updatedItem, 
+    //             {
+    //                 headers: {
+    //                     'Content-Type': 'application/json',
+    //                 }
+    //             }
+    //         );
+    //         return response.data; // Return updated item
+    //     } catch (error) {
+    //         console.error("Error updating item:", error);
+    //         return null; // Return null on failure
+    //     }
+    // }
+
+    // const { mutate: updateItemMutation } = useMutation({
+    //     mutationFn: updateItem,
+    //     onSuccess: (data) => {
+    //         console.log("Item updated successfully:", data);
+    //     },
+    //     onError: (error) => {
+    //         console.error("Error updating item:", error.message);
+    //     },
+    // });
+
     const totalRecords: number = data?.item_count ?? 0;
     const canPrevPage: boolean = page > 1;
     const canNextPage: boolean = totalRecords > limit * page;
@@ -180,7 +208,7 @@ const TableScreen = () => {
     
 
     return (
-        <div className="flex flex-col min-h-screen max-w-6xl mx-auto py-2 px-4 sm:px-6 lg:px-5">
+        <div className="flex flex-col min-h-screen max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-5">
 
             <div className="mb-4 relative">
                 <input value={search ?? ""} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-gray-300 focus:border-gray-300 focus:outline-none"/>

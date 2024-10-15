@@ -20,6 +20,7 @@ type ItemStore interface {
 	GetWarrantyCount(search string) (int, error)
 	GetSoldItemsCount (search string) (int, error)
 	GetAllSoldItems(limit int, offset int, search string) ([]SoldItem, int, error)
+	UpdateItemSold(updated_solditem SoldItem) error
 }
 
 type Item struct {
@@ -69,7 +70,7 @@ type SoldItem struct {
 	DatetimeSold	time.Time 	`json:"datetime_sold"`
 	Invoice			string		`json:"invoice"`
 	OnlineShop		string		`json:"ol_shop"`
-	PaymentStatus	string		`json:"payment_status"`
+	PaymentStatus	bool		`json:"payment_status"`
 	Journal			bool 		`json:"journal"`
 }
 
@@ -93,5 +94,10 @@ type GetItemAndWarrantyPayload struct {
 type SoldItemPayload struct {
 	Invoice			string		`json:"invoice" validate:"required"`
 	OnlineShop	string			`json:"ol_shop" validate:"required"`
-	PaymentStatus	string		`json:"payment_status" validate:"required"`
+}
+
+type SoldItemBulkPayload struct {
+	ItemTags	[]string	`json:"item_tags" validate:"required"`
+	Invoice			string		`json:"invoice" validate:"required"`
+	OnlineShop	string			`json:"ol_shop" validate:"required"`
 }

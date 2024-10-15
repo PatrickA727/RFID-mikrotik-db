@@ -1,15 +1,15 @@
 import axios from 'axios';
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useMutation } from "@tanstack/react-query";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Button, ButtonGroup, Text } from "@chakra-ui/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ItemSold {
     item_sn: number,
     datetime_sold: Date,
     invoice: string,
     ol_shop: string,
-    payment_status: string,
+    payment_status: boolean,
     journal: boolean
 }
 
@@ -33,6 +33,54 @@ const ItemSoldTable = () => {
         },
         placeholderData: keepPreviousData,
     });
+
+    const updateItem = async (updatedItem: ItemSold): Promise<ItemSold | null> => {
+        try {
+            const response = await axios.patch<ItemSold>(
+                "/api/item/edit-item-sold", 
+                updatedItem, 
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                }
+            );
+            return response.data; // Return updated item
+        } catch (error) {
+            console.error("Error updating item:", error);
+            return null; // Return null on failure
+        }
+    }
+
+    const [localData, setLocalData] = useState<ItemSold[]>([]); // Ensure localData has an appropriate default value.
+
+    useEffect(() => {
+    if (data) {
+        setLocalData(data.sold_items); // Ensure data is being set correctly
+    }
+    }, [data]);
+
+    const { mutate: updateItemMutation } = useMutation({
+        mutationFn: updateItem,
+        onSuccess: (data) => {
+            console.log("Item updated successfully:", data);
+        },
+        onError: (error) => {
+            console.error("Error updating item:", error.message);
+        },
+    });
+
+    const handleSelectChange = (index: number, field: keyof ItemSold, value: string) => {
+        const updatedData = [...localData];
+        
+        if (field === 'payment_status' || field === 'journal') {
+            updatedData[index][field] = value === 'Paid' || value === 'Sent';
+        }
+    
+        setLocalData(updatedData);
+    
+        updateItemMutation(updatedData[index]);
+      };
 
     const totalRecords: number = data?.sold_items_count ?? 0;
     const canPrevPage: boolean = page > 1;
@@ -89,16 +137,23 @@ const ItemSoldTable = () => {
             )
         }),
 
-        columnHelper.accessor("payment_status", {
-            cell: (info) => (
-                info.getValue()
-            ),
-            header: () => (
-                <span className="flex items-center">
-                    Payment Status
-                </span>
-            )
-        }),
+        {
+            accessorKey: 'payment_status',
+            header: () => <span className="flex items-center">Payment Status</span>,
+            cell: ({ row }) => {
+              const value = row.original.payment_status ? 'Paid' : 'Not Paid';  // original value from db
+      
+              return (
+                <select
+                  value={value}
+                  onChange={(e) => handleSelectChange(row.index, 'payment_status', e.target.value)}
+                >
+                  <option value="Paid">Paid</option>
+                  <option value="Not Paid">Not Paid</option>
+                </select>
+              );
+            },
+          },
 
         columnHelper.accessor("journal", {
             cell: (info) => (info.getValue() ? 'Sent' : 'Not sent'),
@@ -130,7 +185,7 @@ const ItemSoldTable = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen max-w-6xl mx-auto py-2 px-4 sm:px-6 lg:px-5">
+        <div className="flex flex-col min-h-screen max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-5">
 
             <div className="mb-4 relative">
                 <input value={search ?? ""} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-gray-300 focus:border-gray-300 focus:outline-none"/>
