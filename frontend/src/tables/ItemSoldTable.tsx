@@ -155,14 +155,22 @@ const ItemSoldTable = () => {
             },
           },
 
-        columnHelper.accessor("journal", {
-            cell: (info) => (info.getValue() ? 'Sent' : 'Not sent'),
-            header: () => (
-                <span className="flex items-center">
-                    Journal
-                </span>
-            )
-        }),
+        {
+            accessorKey: 'journal',
+            header: () => <span className="flex items-center"> Journal </span>,
+            cell: ({ row }) => {
+                const value = row.original.journal ? 'Sent' : 'Not Sent';
+
+                return (
+                    <select
+                    value={value}
+                    onChange={(e) => handleSelectChange(row.index, 'journal', e.target.value)}>
+                        <option value="Sent">Sent</option>
+                        <option value="Not Sent">Not Sent</option>
+                    </select>
+                );
+            },
+        },
     ];
 
     const sold_items = data?.sold_items ?? [];
