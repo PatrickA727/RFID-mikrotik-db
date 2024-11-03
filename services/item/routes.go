@@ -111,14 +111,15 @@ func (h *Handler) handleGetItems(w http.ResponseWriter, r *http.Request) {
 	if len(items) == 0 {
 		utils.WriteJSON(w, http.StatusOK, []types.Item{})
 		return
+	} else {
+		response := types.ItemsResponse{
+			Items:     items,
+			ItemCount: itemCount,
+		}
+	
+		utils.WriteJSON(w, http.StatusOK, response)
 	}
 
-	response := types.ItemsResponse{
-		Items:     items,
-		ItemCount: itemCount,
-	}
-
-	utils.WriteJSON(w, http.StatusOK, response)
 }
 
 func (h *Handler) handleActivateNewWarranty(w http.ResponseWriter, r *http.Request) {

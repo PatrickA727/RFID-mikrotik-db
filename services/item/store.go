@@ -80,7 +80,7 @@ func (s *Store) GetItems(limit int, offset int, search string) ([]types.Item ,in
 		searchPattern := "%" + search + "%"
 
 		rows, err = s.db.QueryContext(context.Background(), 
-			"SELECT id, serial_number, rfid_tag, item_name, warranty, sold, modal, keuntungan, quantity, createdat FROM items WHERE serial_number ILIKE $1 OR rfid_tag ILIKE $1 OR item_name ILIKE $1 ORDER BY batch DESC LIMIT $2 OFFSET $3", searchPattern, limit, offset,
+			"SELECT id, serial_number, rfid_tag, item_name, warranty, sold, modal, keuntungan, quantity, batch, createdat FROM items WHERE serial_number ILIKE $1 OR rfid_tag ILIKE $1 OR item_name ILIKE $1 ORDER BY batch DESC LIMIT $2 OFFSET $3", searchPattern, limit, offset,
 		)
 		if err != nil {
 			return nil, 0, err
