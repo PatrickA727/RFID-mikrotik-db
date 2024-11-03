@@ -28,7 +28,9 @@ func (s *Store) BeginTransaction(ctx context.Context) (*sql.Tx, error) {
 }
 
 func (s *Store) CreateItem(item types.Item) error {
-	_, err := s.db.Exec("INSERT INTO items (serial_number, rfid_tag, item_name) VALUES ($1, $2, $3)", item.SerialNumber, item.RFIDTag, item.ItemName)
+	_, err := s.db.Exec("INSERT INTO items (serial_number, rfid_tag, item_name, quantity, batch) VALUES ($1, $2, $3, $4, $5)", 
+						item.SerialNumber, item.RFIDTag, item.ItemName, item.Quantity, item.Batch,
+					);
 	if err != nil {
 		return err
 	}
@@ -287,11 +289,13 @@ func (s *Store) NewItemSold(sold_item types.SoldItem, ctx context.Context) error
 		if err != nil {
 			if rbErr := tx.Rollback(); rbErr != nil {
 				log.Printf("failed to rollback transaction: %v", rbErr)
+				return
 			}
 			return
 		}
 		if commitErr := tx.Commit(); commitErr != nil {
 			log.Printf("failed to commit transaction: %v", commitErr)
+			return
 		}
 	}()
 

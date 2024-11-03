@@ -78,6 +78,8 @@ type RegisterItemPayload struct {
 	SerialNumber string    `json:"serial_number" validate:"required"`
 	RFIDTag      string `json:"rfid_tag" validate:"required"`
 	ItemName     string `json:"item_name" validate:"required"`
+	Quantity	 int	`json:"quantity" validate:"required"`
+	Batch	 int	`json:"batch" validate:"required"`
 }
 
 type NewWarrantyPayload struct {

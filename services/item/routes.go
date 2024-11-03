@@ -8,7 +8,7 @@ import (
 
 	"github.com/PatrickA727/mikrotik-db-sys/types"
 	"github.com/PatrickA727/mikrotik-db-sys/utils"
-	"github.com/go-playground/validator"
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 )
 
@@ -55,6 +55,8 @@ func (h *Handler) handleRegisterItem(w http.ResponseWriter, r *http.Request) {
 		SerialNumber: payload.SerialNumber,
 		RFIDTag: payload.RFIDTag,
 		ItemName: payload.ItemName,
+		Quantity: payload.Quantity,
+		Batch: payload.Batch,
 	})
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error creating item %v", err))
@@ -288,6 +290,7 @@ func (h *Handler) handleItemSoldBulk (w http.ResponseWriter, r *http.Request) {
 		i, err := h.store.GetItemByRFIDTag(itemTag)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error getting items: %v", err))
+			return
 		}
 
 		err = h.store.NewItemSold(types.SoldItem{
@@ -297,6 +300,7 @@ func (h *Handler) handleItemSoldBulk (w http.ResponseWriter, r *http.Request) {
 		}, ctx)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error bulk registering sold items: %v", err))
+			return
 		}
 	}
 
