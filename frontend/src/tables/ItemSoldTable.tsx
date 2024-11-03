@@ -2,7 +2,8 @@ import axios from 'axios';
 import { keepPreviousData, useQuery, useMutation } from "@tanstack/react-query";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Button, ButtonGroup, Text } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { debounce } from 'lodash';
 
 interface ItemSold {
     item_sn: number,
@@ -25,10 +26,20 @@ const ItemSoldTable = () => {
         offset = (page - 1) * limit
     }
 
+    const debouncedSetSearch = useCallback(
+        debounce((query) => setSearch(query), 25),
+        []
+    );
+
+    const handleSearchChange = (e) => {
+        debouncedSetSearch(e.target.value);
+    };
+
     const {data, error, isError, isLoading} = useQuery<{ sold_items: ItemSold[], sold_items_count: number }>({
         queryKey: ["soldItem", offset, search],
         queryFn: async(): Promise<{ sold_items: ItemSold[], sold_items_count: number }> => {
             const { data } = await axios.get<{ sold_items: ItemSold[], sold_items_count: number }>(`api/item/get-sold-items?limit=${limit}&offset=${offset}&search=${search}`);
+            console.log('HIT: ', data)
             return data
         },
         placeholderData: keepPreviousData,
@@ -196,7 +207,7 @@ const ItemSoldTable = () => {
         <div className="flex flex-col min-h-screen max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-5">
 
             <div className="mb-4 relative">
-                <input value={search ?? ""} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-gray-300 focus:border-gray-300 focus:outline-none"/>
+                <input value={search ?? ""} onChange={handleSearchChange} placeholder="Search..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-gray-300 focus:border-gray-300 focus:outline-none"/>
             </div>
 
             <div className="overflow-x-auto bg-white shadow-md rounded-lg">

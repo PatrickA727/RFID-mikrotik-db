@@ -336,7 +336,6 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
    }
 
    if search != "" {
-
 	   searchPattern := "%" + search + "%"
 
 	   rows, err = s.db.QueryContext(context.Background(), 
@@ -345,12 +344,11 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 			   JOIN items i ON s.item_id = i.id 
 			   WHERE s.datetime_sold::text ILIKE $1 
 			   OR s.invoice ILIKE $1 
-			   OR s.payment_status ILIKE $1 
 			   OR s.ol_shop ILIKE $1
 			   OR i.serial_number ILIKE $1 
 			   ORDER BY s.id DESC 
 			LIMIT $2 OFFSET $3`, searchPattern, limit, offset,
-	   )
+		)
 	   if err != nil {
 		   return nil, 0, err
 	   }
@@ -402,7 +400,6 @@ func (s *Store) GetSoldItemsCount (search string) (int, error) {
 			   JOIN items i ON s.item_id = i.id 
 			   WHERE s.datetime_sold::text ILIKE $1 
 			   OR s.invoice ILIKE $1 
-			   OR s.payment_status ILIKE $1 
 			   OR i.serial_number ILIKE $1`, searchPattern, 
 	).Scan(&soldItemsCount)
 		if err != nil {

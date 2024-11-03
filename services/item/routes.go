@@ -360,12 +360,13 @@ func (h *Handler) handleGetAllSoldItem (w http.ResponseWriter, r *http.Request) 
 
 	if len(soldItems) == 0 {
 		utils.WriteJSON(w, http.StatusOK, []types.SoldItem{})
+	} else {
+		response := types.SoldItemsResponse {
+			SoldItems: soldItems,
+			SoldItemsCount: soldItemsCount,
+		}
+	
+		utils.WriteJSON(w, http.StatusOK, response)
 	}
 
-	response := types.SoldItemsResponse {
-		SoldItems: soldItems,
-		SoldItemsCount: soldItemsCount,
-	}
-
-	utils.WriteJSON(w, http.StatusOK, response)
 }
