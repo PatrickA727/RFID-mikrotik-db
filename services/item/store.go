@@ -136,7 +136,7 @@ func (s *Store) GetItemCount(search string) (int, error) {
 	return itemCount, nil
 }
 
-func (s *Store) DeleteItemBySN(serial_num int) error {
+func (s *Store) DeleteItemBySN(serial_num string) error {
 	_, err := s.db.Exec("DELETE FROM items WHERE serial_number = $1", serial_num)
 	if err != nil {
 		return err

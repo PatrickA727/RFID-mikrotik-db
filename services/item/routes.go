@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
 	"github.com/PatrickA727/mikrotik-db-sys/types"
 	"github.com/PatrickA727/mikrotik-db-sys/utils"
 	"github.com/go-playground/validator/v10"
@@ -67,19 +66,16 @@ func (h *Handler) handleRegisterItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleDeleteItem(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
+	)
+
 	// Get serial number from path parameter
 	vars := mux.Vars(r)
 	serial_num := vars["serial_num"]
 
-	serialNum, err := strconv.Atoi(serial_num)
-    if err != nil {
-        // Handle the error, maybe return a 400 Bad Request
-        utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid serial number"))
-        return
-    }
-
 	// Delete item
-	err = h.store.DeleteItemBySN(serialNum)
+	err = h.store.DeleteItemBySN(serial_num)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error deleting item: %v", err))
 		return
