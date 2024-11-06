@@ -23,7 +23,7 @@ func NewHandler (store types.ItemStore) *Handler {
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/register-item", h.handleRegisterItem).Methods("POST")
-	router.HandleFunc("/delete/{serial_num}", h.handleDeleteItem).Methods("DELETE")
+	router.HandleFunc("/delete/{rfid_tag}", h.handleDeleteItem).Methods("DELETE")
 	router.HandleFunc("/register-warranty/{rfid_tag}", h.handleActivateNewWarranty).Methods("POST")
 	router.HandleFunc("/item-sold/{rfid_tag}", h.handleItemSold).Methods("POST")
 	router.HandleFunc("/get-items", h.handleGetItems).Methods("GET")
@@ -31,6 +31,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/get-sold-items", h.handleGetAllSoldItem).Methods("GET")
 	router.HandleFunc("/item-sold-bulk", h.handleItemSoldBulk).Methods("POST")
 	router.HandleFunc("/edit-item-sold", h.handleUpdateSoldItem).Methods("PATCH")
+	router.HandleFunc("/get-item-rfid/{rfid_tag}", h.handleGetItemByRFID).Methods("GET")
 }
 
 func (h *Handler) handleRegisterItem(w http.ResponseWriter, r *http.Request) {
@@ -72,16 +73,28 @@ func (h *Handler) handleDeleteItem(w http.ResponseWriter, r *http.Request) {
 
 	// Get serial number from path parameter
 	vars := mux.Vars(r)
-	serial_num := vars["serial_num"]
+	rfid_tag := vars["rfid_tag"]
 
 	// Delete item
-	err = h.store.DeleteItemBySN(serial_num)
+	err = h.store.DeleteItemByRFID(rfid_tag)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error deleting item: %v", err))
 		return
 	}
 
 	utils.WriteJSON(w, http.StatusOK, "item deleted")
+}
+
+func(h *Handler) handleGetItemByRFID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	rfid_tag := vars["rfid_tag"]
+
+	i, err := h.store.GetItemByRFIDTag(rfid_tag)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error getting item by rfid: %v", err))
+	}
+
+	utils.WriteJSON(w, http.StatusOK, i)
 }
 
 func (h *Handler) handleGetItems(w http.ResponseWriter, r *http.Request) {

@@ -9,7 +9,7 @@ import (
 type ItemStore interface {
 	BeginTransaction(ctx context.Context) (*sql.Tx, error)
 	CreateItem(item Item) error
-	DeleteItemBySN(serial_num string) error
+	DeleteItemByRFID(rfid_tag string) error
 	GetItemByRFIDTag(rfid_tag string) (*Item, error)
 	GetItems(limit int, offset int, search string) ([]Item ,int, error)
 	CreateWarranty(warranty Warranty,  ctx context.Context) error

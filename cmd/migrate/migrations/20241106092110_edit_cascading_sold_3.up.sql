@@ -1,0 +1,5 @@
+ALTER TABLE sold_items
+ADD CONSTRAINT fk_item
+FOREIGN KEY (item_id)
+REFERENCES items(id)
+ON DELETE CASCADE;

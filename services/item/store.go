@@ -41,8 +41,8 @@ func (s *Store) CreateItem(item types.Item) error {
 func (s *Store) GetItemByRFIDTag(rfid_tag string) (*types.Item, error) {
 	var item types.Item
 
-	err := s.db.QueryRow("SELECT id, serial_number, rfid_tag, item_name FROM items WHERE rfid_tag = $1", rfid_tag).Scan(
-		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, 
+	err := s.db.QueryRow("SELECT id, serial_number, rfid_tag, item_name, sold, modal, keuntungan, quantity, batch FROM items WHERE rfid_tag = $1", rfid_tag).Scan(
+		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, &item.Sold, &item.Modal, &item.Keuntungan, &item.Quantity, &item.Batch,
 	)
 	if err != nil {
 		return nil, err
@@ -136,8 +136,8 @@ func (s *Store) GetItemCount(search string) (int, error) {
 	return itemCount, nil
 }
 
-func (s *Store) DeleteItemBySN(serial_num string) error {
-	_, err := s.db.Exec("DELETE FROM items WHERE serial_number = $1", serial_num)
+func (s *Store) DeleteItemByRFID(rfid_tag string) error {
+	_, err := s.db.Exec("DELETE FROM items WHERE rfid_tag = $1", rfid_tag)
 	if err != nil {
 		return err
 	}
