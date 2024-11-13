@@ -61,7 +61,7 @@ const ItemSoldTable = () => {
             console.error("Error updating item:", error);
             return null; // Return null on failure
         }
-    }
+    };
 
     const [localData, setLocalData] = useState<ItemSold[]>([]); // Ensure localData has an appropriate default value.
 

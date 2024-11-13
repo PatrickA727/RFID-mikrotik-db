@@ -1,9 +1,11 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, ButtonGroup, Text } from "@chakra-ui/react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import axios from 'axios';
 import { useState, useCallback } from "react";
 import { debounce } from 'lodash';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTrash } from '@fortawesome/free-solid-svg-icons';
 
 interface Item {
   serial_number: number,
@@ -30,6 +32,8 @@ const TableScreen = () => {
         offset = (page - 1) * limit 
     }
 
+    const queryClient = useQueryClient();
+
     const debouncedSetSearch = useCallback(
         debounce((query) => setSearch(query), 25),
         []
@@ -43,39 +47,44 @@ const TableScreen = () => {
         queryKey: ['items', offset, search],    // Refetches when offset/search changes value
         queryFn: async (): Promise<{ items: Item[], item_count: number }> => { 
             const { data } = await axios.get<{ items: Item[], item_count: number }>(`/api/item/get-items?limit=${limit}&offset=${offset}&search=${search}`);
-            console.log("API HIT: ", data)
             return data;
         },
         placeholderData: keepPreviousData,
     });
 
-    // const updateItem = async (updatedItem: Item): Promise<Item | null> => {
-    //     try {
-    //         const response = await axios.patch<Item>(
-    //             "/api/item/edit-item-sold", 
-    //             updatedItem, 
-    //             {
-    //                 headers: {
-    //                     'Content-Type': 'application/json',
-    //                 }
-    //             }
-    //         );
-    //         return response.data; // Return updated item
-    //     } catch (error) {
-    //         console.error("Error updating item:", error);
-    //         return null; // Return null on failure
-    //     }
-    // }
+    const deleteHandler = async (epc_tag: string) => {
+        if (window.confirm("Are you sure you want to delete this item?")) {
+            try{
+                await deleteItemMutation(epc_tag);
+                console.log("Item deleted");
+            } catch (error) {
+                console.log("Error deleting item:", error)
+            }
+        }
+    }
 
-    // const { mutate: updateItemMutation } = useMutation({
-    //     mutationFn: updateItem,
-    //     onSuccess: (data) => {
-    //         console.log("Item updated successfully:", data);
-    //     },
-    //     onError: (error) => {
-    //         console.error("Error updating item:", error.message);
-    //     },
-    // });
+    const deleteItem = async (epc_tag: string) => {
+        try {
+            console.log("TAG: ", epc_tag);
+            const response = await axios.delete<Item>(
+                `api/item/delete/${epc_tag}`
+            );
+            console.log("response:", response);
+        } catch (error) {
+            console.log("Error deleting:", error);
+        }
+    };
+
+    const { mutate: deleteItemMutation } = useMutation ({
+        mutationFn: deleteItem,
+        onSuccess: () => {
+            console.log("Item deleted");
+            queryClient.invalidateQueries({queryKey: ['items']});
+        },
+        onError: (error) => {
+            console.log("Error deleting item:", error.message);
+        }
+    });
 
     const totalRecords: number = data?.item_count ?? 0;
     const canPrevPage: boolean = page > 1;
@@ -192,6 +201,24 @@ const TableScreen = () => {
             header: () => (
                 <span className="flex items-center">
                     Quantity
+                </span>
+            )
+        }),
+
+        columnHelper.display({
+            id: "delete",
+            cell: ({ row }) => (
+                <button
+                    onClick={() => deleteHandler(row.original.rfid_tag)} 
+                    className="text-red-600 hover:text-red-800"
+                    aria-label="Delete"
+                >
+                    <FontAwesomeIcon icon={faTrash} />
+                </button>
+            ),
+            header: () => (
+                <span className="flex items-center">
+                    Delete
                 </span>
             )
         }),
