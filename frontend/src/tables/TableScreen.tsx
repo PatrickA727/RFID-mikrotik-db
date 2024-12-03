@@ -17,6 +17,7 @@ interface Item {
   keuntungan: number,
   quantity: number,
   batch: number,
+  status: string,
   createdat: Date,
 }
 
@@ -163,11 +164,22 @@ const TableScreen = () => {
             )
         }),
 
-        columnHelper.accessor("sold", {
-            cell: (info) => (info.getValue() ? 'Yes' : 'No'),
+        // columnHelper.accessor("sold", {
+        //     cell: (info) => (info.getValue() ? 'Yes' : 'No'),
+        //     header: () => (
+        //         <span className="flex items-center">
+        //             Sold
+        //         </span>
+        //     )
+        // }),  
+
+        columnHelper.accessor("status", {
+            cell: (info) => (
+                info.getValue()
+            ),
             header: () => (
                 <span className="flex items-center">
-                    Sold
+                    Status
                 </span>
             )
         }),
