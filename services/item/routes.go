@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
 	"github.com/PatrickA727/mikrotik-db-sys/types"
 	"github.com/PatrickA727/mikrotik-db-sys/utils"
 	"github.com/go-playground/validator/v10"
@@ -27,6 +28,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/register-warranty/{rfid_tag}", h.handleActivateNewWarranty).Methods("POST")
 	router.HandleFunc("/item-sold/{rfid_tag}", h.handleItemSold).Methods("POST")
 	router.HandleFunc("/get-items", h.handleGetItems).Methods("GET")
+	router.HandleFunc("/get-types", h.handleGetItemTypes).Methods("GET")
 	router.HandleFunc("/get-warranties", h.handleGetAllWarranties).Methods("GET")
 	router.HandleFunc("/get-sold-items", h.handleGetAllSoldItem).Methods("GET")
 	router.HandleFunc("/item-sold-bulk", h.handleItemSoldBulk).Methods("POST")
@@ -403,7 +405,7 @@ func (h *Handler) handleCreateItemType(w http.ResponseWriter, r *http.Request) {
 
 	// Create item
 	err = h.store.CreateItemType(types.ItemType{
-		ItemType: payload.ItemType,
+		TypeName: payload.ItemType,
 		Price: payload.Price,
 	})
 	if err != nil {
@@ -411,4 +413,19 @@ func (h *Handler) handleCreateItemType(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusCreated, payload);
+}
+
+func (h *Handler) handleGetItemTypes (w http.ResponseWriter, r *http.Request) {
+	item_types, err := h.store.GetItemTypes()
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error getting types: %v", err));
+		return
+	}
+
+	response := types.TypesResponse{
+		ItemTypes: item_types,
+		TypeCount: len(item_types),
+	}
+
+	utils.WriteJSON(w, http.StatusOK, response)
 }

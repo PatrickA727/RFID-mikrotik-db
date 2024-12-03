@@ -1,0 +1,2 @@
+ALTER TABLE items 
+ADD COLUMN status VARCHAR(70) NOT NULL DEFAULT 'not sold';

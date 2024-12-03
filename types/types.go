@@ -22,6 +22,7 @@ type ItemStore interface {
 	GetSoldItemsCount (search string) (int, error)
 	GetAllSoldItems(limit int, offset int, search string) ([]SoldItem, int, error)
 	UpdateItemSold(updated_solditem SoldItem) error
+	GetItemTypes() ([]ItemType, error)
 }
 
 type Item struct {
@@ -40,8 +41,13 @@ type Item struct {
 
 type ItemType struct {
 	ID			int 	`json:"id"`
-	ItemType 	string	`json:"item_type"`
+	TypeName 	string	`json:"item_type"`
 	Price		int		`json:"price"`
+}
+
+type TypesResponse struct {
+	ItemTypes	[]ItemType	`json:"types"`
+	TypeCount	int			`json:"count"`
 }
 
 type ItemsResponse struct {

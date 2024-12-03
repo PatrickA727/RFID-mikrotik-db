@@ -39,12 +39,39 @@ func (s *Store) CreateItem(item types.Item) error {
 }
 
 func (s *Store) CreateItemType(item_type types.ItemType) error {
-	_, err := s.db.Exec("INSERT INTO item_type (item_type, price) VALUES ($1, $2)", item_type.ItemType, item_type.Price)
+	_, err := s.db.Exec("INSERT INTO item_type (item_type, price) VALUES ($1, $2)", item_type.TypeName, item_type.Price)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (s *Store) GetItemTypes() ([]types.ItemType, error) {
+	var item_types []types.ItemType
+
+	rows, err := s.db.QueryContext(context.Background(), "SELECT * FROM item_type");
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var item_type types.ItemType
+
+		if err := rows.Scan(&item_type.ID, &item_type.TypeName, &item_type.Price); err != nil {
+			return nil, err
+		}
+
+		item_types = append(item_types, item_type)
+	}
+	 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return item_types, nil
 }
 
 func (s *Store) GetItemByRFIDTag(rfid_tag string) (*types.Item, error) {
@@ -101,7 +128,7 @@ func (s *Store) GetItems(limit int, offset int, search string) ([]types.Item ,in
 		}
 	}
 
-	defer rows.Close()	// Close rows after finish processing the data
+	defer rows.Close()	// Close rows database connection after finish processing the data/function
 
 	var items []types.Item
 
