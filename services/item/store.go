@@ -116,13 +116,13 @@ func (s *Store) GetItems(limit int, offset int, search string) ([]types.Item ,in
 		searchPattern := "%" + search + "%"
 
 		rows, err = s.db.QueryContext(context.Background(), 
-			"SELECT id, serial_number, rfid_tag, item_name, warranty, sold, modal, keuntungan, quantity, batch, status, createdat FROM items WHERE serial_number ILIKE $1 OR rfid_tag ILIKE $1 OR item_name ILIKE $1 ORDER BY batch DESC LIMIT $2 OFFSET $3", searchPattern, limit, offset,
+			"SELECT id, serial_number, rfid_tag, item_name, warranty, sold, modal, keuntungan, quantity, batch, status, type_ref, createdat FROM items WHERE serial_number ILIKE $1 OR rfid_tag ILIKE $1 OR item_name ILIKE $1 ORDER BY batch DESC LIMIT $2 OFFSET $3", searchPattern, limit, offset,
 		)
 		if err != nil {
 			return nil, 0, err
 		}
 	} else {
-		rows, err = s.db.QueryContext(context.Background(), "SELECT id, serial_number, rfid_tag, item_name, warranty, sold, modal, keuntungan, quantity, batch, status, createdat FROM items ORDER BY batch DESC LIMIT $1 OFFSET $2", limit, offset)
+		rows, err = s.db.QueryContext(context.Background(), "SELECT id, serial_number, rfid_tag, item_name, warranty, sold, modal, keuntungan, quantity, batch, status, type_ref, createdat FROM items ORDER BY batch DESC LIMIT $1 OFFSET $2", limit, offset)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -135,7 +135,7 @@ func (s *Store) GetItems(limit int, offset int, search string) ([]types.Item ,in
 	for rows.Next() {
 		var item types.Item
 
-		if err := rows.Scan(&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, &item.Warranty, &item.Sold, &item.Modal, &item.Keuntungan, &item.Quantity, &item.Batch, &item.Status, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, &item.Warranty, &item.Sold, &item.Modal, &item.Keuntungan, &item.Quantity, &item.Batch, &item.Status, &item.TypeRef, &item.CreatedAt); err != nil {
 			return nil, 0, err
 		}
 
@@ -343,7 +343,7 @@ func (s *Store) NewItemSold(sold_item types.SoldItem, ctx context.Context) error
 		return err
 	}
 
-	_, err = tx.ExecContext(ctx, "UPDATE items SET sold = $1 WHERE id = $2", true, sold_item.ItemID)
+	_, err = tx.ExecContext(ctx, "UPDATE items SET status = $1 WHERE id = $2", "sold-pending", sold_item.ItemID)
 	if err != nil {
 		return err
 	} 

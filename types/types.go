@@ -37,6 +37,7 @@ type Item struct {
 	Quantity	 int 	`json:"quantity"`
 	Batch		 int	`json:"batch"`
 	Status		 string	`json:"status"`
+	TypeRef		 string	`json:"type_ref"`
 	CreatedAt	 time.Time	`json:"createdat"`	
 }
 

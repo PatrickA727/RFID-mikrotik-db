@@ -11,6 +11,7 @@ interface Item {
   serial_number: number,
   rfid_tag: string,
   item_name: string,
+  type_ref: string,
   warranty: string,
   sold: boolean,
   modal: number,
@@ -142,7 +143,7 @@ const TableScreen = () => {
             )
         }),
 
-        columnHelper.accessor("item_name", {
+        columnHelper.accessor("type_ref", {
             cell: (info) => (
                 info.getValue()
             ),
