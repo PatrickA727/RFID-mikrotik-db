@@ -32,6 +32,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/item-sold-bulk", h.handleItemSoldBulk).Methods("POST")
 	router.HandleFunc("/edit-item-sold", h.handleUpdateSoldItem).Methods("PATCH")
 	router.HandleFunc("/get-item-rfid/{rfid_tag}", h.handleGetItemByRFID).Methods("GET")
+	router.HandleFunc("/register-item-type", h.handleCreateItemType).Methods("POST")
 }
 
 func (h *Handler) handleRegisterItem(w http.ResponseWriter, r *http.Request) {
@@ -382,4 +383,32 @@ func (h *Handler) handleGetAllSoldItem (w http.ResponseWriter, r *http.Request) 
 		utils.WriteJSON(w, http.StatusOK, response)
 	}
 
+}
+
+func (h *Handler) handleCreateItemType(w http.ResponseWriter, r *http.Request) {
+	// Get JSON
+	var payload types.ItemTypePayload
+	err := utils.ParseJSON(r, &payload)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error parsing: %v", err))
+		return
+	}
+
+	//Validate JSON
+	if err := utils.Validate.Struct(payload); err != nil {
+		errors := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
+		return
+	}
+
+	// Create item
+	err = h.store.CreateItemType(types.ItemType{
+		ItemType: payload.ItemType,
+		Price: payload.Price,
+	})
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error creating type: %v", err))
+	}
+
+	utils.WriteJSON(w, http.StatusCreated, payload);
 }

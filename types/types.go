@@ -9,6 +9,7 @@ import (
 type ItemStore interface {
 	BeginTransaction(ctx context.Context) (*sql.Tx, error)
 	CreateItem(item Item) error
+	CreateItemType(item_type ItemType) error
 	DeleteItemByRFID(rfid_tag string) error
 	GetItemByRFIDTag(rfid_tag string) (*Item, error)
 	GetItems(limit int, offset int, search string) ([]Item ,int, error)
@@ -35,6 +36,12 @@ type Item struct {
 	Quantity	 int 	`json:"quantity"`
 	Batch		 int	`json:"batch"`
 	CreatedAt	 time.Time	`json:"createdat"`	
+}
+
+type ItemType struct {
+	ID			int 	`json:"id"`
+	ItemType 	string	`json:"item_type"`
+	Price		int		`json:"price"`
 }
 
 type ItemsResponse struct {
@@ -91,6 +98,11 @@ type NewWarrantyPayload struct {
 
 type GetItemAndWarrantyPayload struct {
 	RFIDTag	string	`json:"rfid_tag" validate:"required"`
+}
+
+type ItemTypePayload struct {
+	ItemType	string	`json:"item_type" validate:"required"`
+	Price		int		`json:"price" validate:"required"`
 }
 
 type SoldItemPayload struct {

@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS item_type (
+    id SERIAL PRIMARY KEY,
+    item_type VARCHAR(255) NOT NULL UNIQUE,
+    price INT NOT NULL
+);

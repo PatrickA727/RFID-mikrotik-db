@@ -38,6 +38,15 @@ func (s *Store) CreateItem(item types.Item) error {
 	return nil
 }
 
+func (s *Store) CreateItemType(item_type types.ItemType) error {
+	_, err := s.db.Exec("INSERT INTO item_type (item_type, price) VALUES ($1, $2)", item_type.ItemType, item_type.Price)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Store) GetItemByRFIDTag(rfid_tag string) (*types.Item, error) {
 	var item types.Item
 

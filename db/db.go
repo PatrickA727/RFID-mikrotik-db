@@ -17,7 +17,8 @@ func NewPGSQLStorage() (*sql.DB, error) {
     }
 	connStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s sslmode=%s", 
 							os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), 
-							os.Getenv("DB_NAME"), os.Getenv("DB_HOST"), os.Getenv("DB_SSL"),)
+							os.Getenv("DB_NAME"), os.Getenv("DB_HOST"), 
+							os.Getenv("DB_SSL"),)
 	db, err := sql.Open("pgx", connStr)
 	if err != nil {
 		log.Fatal(err)
