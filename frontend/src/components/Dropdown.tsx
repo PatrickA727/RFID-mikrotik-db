@@ -1,7 +1,6 @@
 import { FaChevronDown } from "react-icons/fa"; 
 import { useNavigate } from "react-router-dom";
-import React, { useState, useRef, useEffect } from "react";
-import { faL } from "@fortawesome/free-solid-svg-icons";
+import { useState, useRef, useEffect } from "react";
 
 // interface DropdownButtonProps {
 //     isOpen: boolean;
@@ -54,6 +53,13 @@ const Dropdown = () => {
                 className="block w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
               >
                 Types
+              </button>
+
+              <button
+                onClick={() => handleNavigation("/sell")}
+                className="block w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
+              >
+                Sell
               </button>
             </li>
           </ul>

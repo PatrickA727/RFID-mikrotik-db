@@ -6,24 +6,6 @@ import Dropdown from "../components/Dropdown";
 
 const HomeScreen = () => {
     const [activeTab, setActiveTab] = useState('table1');
-    // const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    // const parentRef = useRef<HTMLDivElement>(null);
-
-    // const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
-
-    // const handleClickOutside = (event: MouseEvent) => {
-    //     if (parentRef.current && !parentRef.current.contains(event.target as Node)) {
-    //       setIsDropdownOpen(false); // Close the dropdown if clicked outside
-    //     }
-    //   };
-    
-    // useEffect(() => {
-    // document.addEventListener("mousedown", handleClickOutside);
-    // return () => {
-    //     document.removeEventListener("mousedown", handleClickOutside);
-    //     console.log("CLICKED")
-    // };
-    // }, []);
 
   const renderTable = () => {
     switch (activeTab) {

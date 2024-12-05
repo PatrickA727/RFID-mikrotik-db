@@ -256,8 +256,6 @@ const TableScreen = () => {
     return <div>Error: {(error as Error).message}</div>;
     }
 
-    
-
     return (
         <div className="flex flex-col min-h-screen max-w-7xl mx-auto py-2 px-4 sm:px-6 lg:px-5">
 

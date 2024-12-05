@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css'
 import ItemTypesScreen from './screens/ItemTypesScreen.tsx';
 import HomeScreen from './screens/HomeScreen.tsx';
+import SellPage from './screens/SellPage.tsx';
 
 const queryClient = new QueryClient()
 
@@ -14,6 +15,7 @@ const router = createBrowserRouter(
     <Route path='/' element={<App/>}>
       <Route index={true} path='/' element={<HomeScreen/>}/>
       <Route path='/type' element={<ItemTypesScreen/>}/>
+      <Route path='/sell' element={<SellPage/>}/>
     </Route>
   )
 )
