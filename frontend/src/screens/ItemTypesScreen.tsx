@@ -3,9 +3,7 @@ import axios from 'axios';
 import { useState } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { FaChevronLeft } from 'react-icons/fa';
-import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
-import HomeScreen from './HomeScreen';
 
 interface Type {
     item_type: string,

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import ItemSoldTable from "../tables/ItemSoldTable";
 import TableScreen from "../tables/TableScreen"
 import WarrantyTable from "../tables/WarrantyTable"
