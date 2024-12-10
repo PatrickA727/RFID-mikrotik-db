@@ -35,6 +35,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/edit-item-sold", h.handleUpdateSoldItem).Methods("PATCH")
 	router.HandleFunc("/get-item-rfid/{rfid_tag}", h.handleGetItemByRFID).Methods("GET")
 	router.HandleFunc("/register-item-type", h.handleCreateItemType).Methods("POST")
+	router.HandleFunc("/get-avail-item", h.handleGetAvailItemBySN).Methods("GET")
 }
 
 func (h *Handler) handleRegisterItem(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +61,7 @@ func (h *Handler) handleRegisterItem(w http.ResponseWriter, r *http.Request) {
 		ItemName: payload.ItemName,
 		Quantity: payload.Quantity,
 		Batch: payload.Batch,
+		TypeRef: payload.TypeRef,
 	})
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error creating item %v", err))
@@ -134,6 +136,29 @@ func (h *Handler) handleGetItems(w http.ResponseWriter, r *http.Request) {
 		}
 	
 		utils.WriteJSON(w, http.StatusOK, response)
+	}
+
+}
+
+func (h *Handler) handleGetAvailItemBySN(w http.ResponseWriter, r *http.Request) {
+	searchQuery := r.URL.Query().Get("search")
+	if searchQuery == "" {
+		return
+	}
+
+	items, err := h.store.GetItemByIdSearch(searchQuery)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error getting items: %v", err))
+		return
+	}
+
+	if len(items) == 0 {
+		utils.WriteJSON(w, http.StatusOK, []types.Item{})
+		return
+	} else {
+		utils.WriteJSON(w, http.StatusOK, map[string]interface{}{
+			"items": items,
+		})
 	}
 
 }
@@ -424,7 +449,6 @@ func (h *Handler) handleGetItemTypes (w http.ResponseWriter, r *http.Request) {
 
 	response := types.TypesResponse{
 		ItemTypes: item_types,
-		TypeCount: len(item_types),
 	}
 
 	utils.WriteJSON(w, http.StatusOK, response)

@@ -12,6 +12,7 @@ type ItemStore interface {
 	CreateItemType(item_type ItemType) error
 	DeleteItemByRFID(rfid_tag string) error
 	GetItemByRFIDTag(rfid_tag string) (*Item, error)
+	GetItemByIdSearch(search string) ([]ItemSellingResponse, error)
 	GetItems(limit int, offset int, search string) ([]Item ,int, error)
 	CreateWarranty(warranty Warranty,  ctx context.Context) error
 	GetWarrantyByItemId(item_id int) (*Warranty, error)
@@ -49,12 +50,18 @@ type ItemType struct {
 
 type TypesResponse struct {
 	ItemTypes	[]ItemType	`json:"types"`
-	TypeCount	int			`json:"count"`
 }
 
 type ItemsResponse struct {
 	Items     []Item `json:"items"`
 	ItemCount int    `json:"item_count"`
+}
+
+type ItemSellingResponse struct {
+	ID           int    `json:"id"`
+	SerialNumber string    `json:"serial_number"`
+	RFIDTag      string `json:"rfid_tag"`
+	TypeRef		 string	`json:"type_ref"`
 }
 
 type WarrantyResponse struct {
@@ -93,6 +100,7 @@ type RegisterItemPayload struct {
 	SerialNumber string    `json:"serial_number" validate:"required"`
 	RFIDTag      string `json:"rfid_tag" validate:"required"`
 	ItemName     string `json:"item_name" validate:"required"`
+	TypeRef		 string	`json:"type_ref" validate:"required"`
 	Quantity	 int	`json:"quantity" validate:"required"`
 	Batch	 int	`json:"batch" validate:"required"`
 }

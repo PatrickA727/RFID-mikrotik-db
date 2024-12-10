@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
-
+	"strings"
 	"github.com/PatrickA727/mikrotik-db-sys/types"
 	_ "github.com/jackc/pgx/v5"
 )
@@ -28,8 +28,8 @@ func (s *Store) BeginTransaction(ctx context.Context) (*sql.Tx, error) {
 }
 
 func (s *Store) CreateItem(item types.Item) error {
-	_, err := s.db.Exec("INSERT INTO items (serial_number, rfid_tag, item_name, quantity, batch) VALUES ($1, $2, $3, $4, $5)", 
-						item.SerialNumber, item.RFIDTag, item.ItemName, item.Quantity, item.Batch,
+	_, err := s.db.Exec("INSERT INTO items (serial_number, rfid_tag, item_name, quantity, batch, type_ref) VALUES ($1, $2, $3, $4, $5, $6)", 
+						item.SerialNumber, item.RFIDTag, item.ItemName, item.Quantity, item.Batch, item.TypeRef,
 					);
 	if err != nil {
 		return err
@@ -87,18 +87,37 @@ func (s *Store) GetItemByRFIDTag(rfid_tag string) (*types.Item, error) {
 	return &item, nil
 }
 
-func (s *Store) GetItemById(item_id int) (*types.Item, error) {
-	var item types.Item
+func (s *Store) GetItemByIdSearch(search string) ([]types.ItemSellingResponse, error) {
+	sanitizedInput := strings.ReplaceAll(search, "%", "\\%")
+    sanitizedInput = strings.ReplaceAll(sanitizedInput, "_", "\\_")
+	searchPattern := sanitizedInput + "%"
 
-	err := s.db.QueryRow("SELECT id, serial_number, rfid_tag, item_name FROM items WHERE id = $1", item_id).Scan(
-		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName,
-	)
+	rows, err := s.db.QueryContext(context.Background(), "SELECT id, serial_number, rfid_tag, type_ref FROM items where serial_number ILIKE $1 AND status ILIKE $2 ORDER BY batch DESC LIMIT 10", searchPattern, "not sold")
 	if err != nil {
 		return nil, err
 	}
 
-	return &item, nil
+	defer rows.Close()
+
+	var items []types.ItemSellingResponse
+
+	for rows.Next() {
+		var item types.ItemSellingResponse
+
+		if err := rows.Scan(&item.ID, &item.SerialNumber, &item.RFIDTag, &item.TypeRef); err != nil {
+			return nil, err
+		}
+
+		items = append(items, item)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return items, nil
 }
+
 
 func (s *Store) GetItems(limit int, offset int, search string) ([]types.Item ,int, error) {
 	var (

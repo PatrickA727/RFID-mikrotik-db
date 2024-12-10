@@ -253,7 +253,7 @@ const TableScreen = () => {
       }
     
     if (isError) {
-    return <div>Error: {(error as Error).message}</div>;
+        return <div>Error: {(error as Error).message}</div>;
     }
 
     return (
