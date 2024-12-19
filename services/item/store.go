@@ -394,7 +394,7 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 	   searchPattern := "%" + search + "%"
 
 	   rows, err = s.db.QueryContext(context.Background(), 
-		   `SELECT s.id, s.item_id, s.datetime_sold, s.invoice, s.ol_shop, s.payment_status, s.journal, i.serial_number 
+		   `SELECT s.id, s.item_id, s.datetime_sold, s.invoice, s.ol_shop, s.payment_status, s.journal, i.serial_number, i.status
 			   FROM sold_items s 
 			   JOIN items i ON s.item_id = i.id 
 			   WHERE s.datetime_sold::text ILIKE $1 
@@ -409,7 +409,7 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 	   }
    } else {
 	   rows, err = s.db.QueryContext(context.Background(), 
-	      `SELECT s.id, s.item_id, s.datetime_sold, s.invoice, s.ol_shop, s.payment_status, s.journal, i.serial_number 
+	      `SELECT s.id, s.item_id, s.datetime_sold, s.invoice, s.ol_shop, s.payment_status, s.journal, i.serial_number, i.status 
 		  FROM sold_items s JOIN items i ON s.item_id = i.id 
 		  ORDER BY id DESC LIMIT $1 OFFSET $2`, limit, offset)
 	   if err != nil {
@@ -423,7 +423,7 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 	for rows.Next() {
 		var soldItem types.SoldItem
 
-		if err := rows.Scan(&soldItem.ID, &soldItem.ItemID, &soldItem.DatetimeSold, &soldItem.Invoice, &soldItem.OnlineShop, &soldItem.PaymentStatus, &soldItem.Journal, &soldItem.ItemSN); err != nil {
+		if err := rows.Scan(&soldItem.ID, &soldItem.ItemID, &soldItem.DatetimeSold, &soldItem.Invoice, &soldItem.OnlineShop, &soldItem.PaymentStatus, &soldItem.Journal, &soldItem.ItemSN, &soldItem.Status); err != nil {
 			return nil, 0, err
 		}
 
@@ -463,4 +463,34 @@ func (s *Store) GetSoldItemsCount (search string) (int, error) {
 	}
 
 	return soldItemsCount, nil
+}
+
+func (s *Store) ShipItem(item_id int, ctx context.Context) error {
+	tx, err := s.BeginTransaction(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer func() {	
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				log.Printf("failed to rollback transaction: %v", rbErr)
+				return
+			}
+			return
+		}
+		if commitErr := tx.Commit(); commitErr != nil {
+			log.Printf("failed to commit transaction: %v", commitErr)
+			return
+		}
+	}()
+
+	_, err = tx.ExecContext(ctx, 
+		"UPDATE items SET status = $1 WHERE id = $2 AND status = $3", "sold-shipped", item_id, "sold-pending",
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

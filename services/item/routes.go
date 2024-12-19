@@ -32,6 +32,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/get-warranties", h.handleGetAllWarranties).Methods("GET")
 	router.HandleFunc("/get-sold-items", h.handleGetAllSoldItem).Methods("GET")
 	router.HandleFunc("/item-sold-bulk", h.handleItemSoldBulk).Methods("POST")
+	router.HandleFunc("/ship-items", h.handleShipItems).Methods("PATCH")
 	router.HandleFunc("/edit-item-sold", h.handleUpdateSoldItem).Methods("PATCH")
 	router.HandleFunc("/get-item-rfid/{rfid_tag}", h.handleGetItemByRFID).Methods("GET")
 	router.HandleFunc("/register-item-type", h.handleCreateItemType).Methods("POST")
@@ -343,6 +344,40 @@ func (h *Handler) handleItemSoldBulk (w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusCreated, "Sold items registered in bulk")
+}
+
+func (h *Handler) handleShipItems(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	// Get JSON payload
+	var payload types.ShipItemsPayload
+	if err := utils.ParseJSON(r, &payload); err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("parsing error: %v", err))
+		return
+	}
+
+	// Validate JSON
+	if err := utils.Validate.Struct(payload); err != nil {
+		errors := err.(validator.ValidationErrors)
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error validating payload: %v", errors))
+		return
+	}
+
+	// Get and register items
+	for _, itemTag := range payload.ItemTags {
+		i, err := h.store.GetItemByRFIDTag(itemTag)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error getting items: %v", err))
+			return
+		}
+
+		err = h.store.ShipItem(i.ID, ctx)
+		if err != nil {
+			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error shipping items: %v", err))
+			return
+		}
+	}
+
+	utils.WriteJSON(w, http.StatusOK, "Item Shipped")
 }
 
 func (h *Handler) handleUpdateSoldItem (w http.ResponseWriter, r *http.Request) {

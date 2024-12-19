@@ -24,6 +24,7 @@ type ItemStore interface {
 	GetAllSoldItems(limit int, offset int, search string) ([]SoldItem, int, error)
 	UpdateItemSold(updated_solditem SoldItem) error
 	GetItemTypes() ([]ItemType, error)
+	ShipItem(item_id int, ctx context.Context) error
 }
 
 type Item struct {
@@ -89,6 +90,7 @@ type SoldItem struct {
 	ID				int 		`json:"id"`
 	ItemID			int 		`json:"item_id"`
 	ItemSN			string		`json:"item_sn"`
+	Status			string		`json:"status"`
 	DatetimeSold	time.Time 	`json:"datetime_sold"`
 	Invoice			string		`json:"invoice"`
 	OnlineShop		string		`json:"ol_shop"`
@@ -130,4 +132,8 @@ type SoldItemBulkPayload struct {
 	ItemTags	[]string	`json:"item_tags" validate:"required"`
 	Invoice			string		`json:"invoice" validate:"required"`
 	OnlineShop	string			`json:"ol_shop" validate:"required"`
+}
+
+type ShipItemsPayload struct {
+	ItemTags	[]string	`json:"item_tags" validate:"required"`
 }

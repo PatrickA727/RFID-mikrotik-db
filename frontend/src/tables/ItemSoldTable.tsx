@@ -7,6 +7,7 @@ import { debounce } from 'lodash';
 
 interface ItemSold {
     item_sn: number,
+    status: string,
     datetime_sold: Date,
     invoice: string,
     ol_shop: string,
@@ -144,6 +145,17 @@ const ItemSoldTable = () => {
             header: () => (
                 <span className="flex items-center">
                     OL Shop
+                </span>
+            )
+        }),
+
+        columnHelper.accessor("status", {
+            cell: (info) => (
+                info.getValue()
+            ),
+            header: () => (
+                <span className="flex items-center">
+                    Status
                 </span>
             )
         }),
