@@ -36,6 +36,14 @@ const ItemSoldTable = () => {
         debouncedSetSearch(e.target.value);
     };
 
+    const formatDate = (rawDate: Date) => {
+        return new Intl.DateTimeFormat('id-ID', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+        }).format(new Date(rawDate));
+    };
+
     const {data, error, isError, isLoading} = useQuery<{ sold_items: ItemSold[], sold_items_count: number }>({
         queryKey: ["soldItem", offset, search],
         queryFn: async(): Promise<{ sold_items: ItemSold[], sold_items_count: number }> => {
@@ -118,7 +126,7 @@ const ItemSoldTable = () => {
 
         columnHelper.accessor("datetime_sold", {
             cell: (info) => (
-                info.getValue()
+                <span>{formatDate(info.getValue())}</span>
             ),
             header: () => (
                 <span className="flex items-center">

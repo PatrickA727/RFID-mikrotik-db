@@ -52,6 +52,14 @@ const TableScreen = () => {
           minimumFractionDigits: 0,
         }).format(price);
       };
+
+    const formatDate = (rawDate: Date) => {
+        return new Intl.DateTimeFormat('id-ID', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+        }).format(new Date(rawDate));
+    };
     
     const { data, error, isLoading, isError } = useQuery<{ items: Item[], item_count: number }>({
         queryKey: ['items', offset, search],    // Refetches when offset/search changes value
@@ -120,7 +128,7 @@ const TableScreen = () => {
 
         columnHelper.accessor("createdat", {
             cell: (info) => (
-                info.getValue()
+                <span>{formatDate(info.getValue())}</span>
             ),
             header: () => (
                 <span className="flex items-center">
