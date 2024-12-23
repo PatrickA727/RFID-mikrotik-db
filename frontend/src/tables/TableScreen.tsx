@@ -44,6 +44,14 @@ const TableScreen = () => {
     const handleSearchChange = (e) => {
         debouncedSetSearch(e.target.value);
     };
+
+    const formatPrice = (price: number) => {
+        return new Intl.NumberFormat('id-ID', {
+          style: 'currency',
+          currency: 'IDR',
+          minimumFractionDigits: 0,
+        }).format(price);
+      };
     
     const { data, error, isLoading, isError } = useQuery<{ items: Item[], item_count: number }>({
         queryKey: ['items', offset, search],    // Refetches when offset/search changes value
@@ -165,15 +173,6 @@ const TableScreen = () => {
             )
         }),
 
-        // columnHelper.accessor("sold", {
-        //     cell: (info) => (info.getValue() ? 'Yes' : 'No'),
-        //     header: () => (
-        //         <span className="flex items-center">
-        //             Sold
-        //         </span>
-        //     )
-        // }),  
-
         columnHelper.accessor("status", {
             cell: (info) => (
                 info.getValue()
@@ -187,7 +186,7 @@ const TableScreen = () => {
 
         columnHelper.accessor("modal", {
             cell: (info) => (
-                info.getValue()
+                <span>{formatPrice(info.getValue())}</span>
             ),
             header: () => (
                 <span className="flex items-center">
@@ -198,7 +197,7 @@ const TableScreen = () => {
 
         columnHelper.accessor("keuntungan", {
             cell: (info) => (
-                info.getValue()
+                <span>{formatPrice(info.getValue())}</span>
             ),
             header: () => (
                 <span className="flex items-center">

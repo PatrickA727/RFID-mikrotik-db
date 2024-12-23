@@ -27,6 +27,14 @@ const ItemTypesScreen = () => {
         console.log(price)
     }
 
+    const formatPrice = (price: number) => {
+        return new Intl.NumberFormat('id-ID', {
+          style: 'currency',
+          currency: 'IDR',
+          minimumFractionDigits: 0,
+        }).format(price);
+      };
+
     const { data, error, isLoading, isError } = useQuery<{ types: Type[], count: number }>({
         queryKey: ['types'],
         queryFn: async(): Promise<{ types: Type[], count: number }> => {
@@ -107,7 +115,7 @@ const ItemTypesScreen = () => {
 
         columnHelper.accessor("price", {
             cell: (info) => (
-                info.getValue()
+                <span>{formatPrice(info.getValue())}</span>
             ),
             header: () => (
                 <span className='flex items-center'>
