@@ -298,7 +298,7 @@ func (h *Handler) handleItemSold(w http.ResponseWriter, r *http.Request) {
 		ItemID: i.ID,
 		Invoice: payload.Invoice,
 		OnlineShop: payload.OnlineShop,
-	}, ctx)
+	}, i.Quantity, ctx)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error registering sold item: %v", err))
 		return
@@ -336,7 +336,7 @@ func (h *Handler) handleItemSoldBulk (w http.ResponseWriter, r *http.Request) {
 			ItemID: i.ID,
 			Invoice: payload.Invoice,
 			OnlineShop: payload.OnlineShop,
-		}, ctx)
+		}, i.Quantity, ctx)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error bulk registering sold items: %v", err))
 			return

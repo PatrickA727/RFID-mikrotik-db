@@ -334,7 +334,7 @@ func (s *Store) GetWarrantyCount(search string) (int, error) {
 	return warrantyCount, nil
 }
 
-func (s *Store) NewItemSold(sold_item types.SoldItem, ctx context.Context) error {
+func (s *Store) NewItemSold(sold_item types.SoldItem, quantity int, ctx context.Context) error {
 	tx, err := s.BeginTransaction(ctx)
 	if err != nil {
 		return err
@@ -362,7 +362,7 @@ func (s *Store) NewItemSold(sold_item types.SoldItem, ctx context.Context) error
 		return err
 	}
 
-	_, err = tx.ExecContext(ctx, "UPDATE items SET status = $1 WHERE id = $2", "sold-pending", sold_item.ItemID)
+	_, err = tx.ExecContext(ctx, "UPDATE items SET status = $1, quantity = $2 WHERE id = $3", "sold-pending", quantity-1, sold_item.ItemID)
 	if err != nil {
 		return err
 	} 

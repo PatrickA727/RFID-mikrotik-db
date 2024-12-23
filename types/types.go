@@ -17,7 +17,7 @@ type ItemStore interface {
 	CreateWarranty(warranty Warranty,  ctx context.Context) error
 	GetWarrantyByItemId(item_id int) (*Warranty, error)
 	GetAllWarranty(limit int, offset int, search string) ([]Warranty, int, error)
-	NewItemSold(sold_item SoldItem, ctx context.Context) error
+	NewItemSold(sold_item SoldItem, quantity int, ctx context.Context) error
 	GetItemCount(search string) (int, error)
 	GetWarrantyCount(search string) (int, error)
 	GetSoldItemsCount (search string) (int, error)
