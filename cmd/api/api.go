@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/PatrickA727/mikrotik-db-sys/services/item"
+	"github.com/PatrickA727/mikrotik-db-sys/services/user"
 	"github.com/gorilla/mux"
 )
 
@@ -28,6 +29,11 @@ func (s *APIServer) Run() error {
 	item_store := item.NewStore(s.db)
 	item_handler := item.NewHandler(item_store)
 	item_handler.RegisterRoutes(subrouter_item)	
+
+	subrouter_user := router.PathPrefix("/api/user").Subrouter()
+	user_store := user.NewStore(s.db)
+	user_handler := user.NewHandler(user_store)
+	user_handler.RegisterRoutes(subrouter_user)
 
 	log.Println("Listening on port: ", s.ListenAddr)
 
