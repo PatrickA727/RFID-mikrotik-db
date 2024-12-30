@@ -141,24 +141,5 @@ func (h *Handler) handleLogout (w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleDeleteUser (w http.ResponseWriter, r *http.Request) {
-	// Get the JWT from the cookie
-    cookie, err := r.Cookie("jwt")
-    if err != nil {
-        utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("missing or invalid token"))
-        return
-    }
-
-    // Parse and validate the JWT
-    token, claims, err := auth.ParseJWT(cookie.Value, []byte(os.Getenv("JWT_SECRET")))
-    if err != nil || !token.Valid {
-        utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("invalid token"))
-        return
-    }
-
-    // Extract the user ID from the claims
-    userID, ok := claims["id"].(string) // Assuming ID is stored as a string in the token
-    if !ok {
-        utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid token claims"))
-        return
-    }
+	
 }
