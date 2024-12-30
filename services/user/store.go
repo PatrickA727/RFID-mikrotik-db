@@ -37,8 +37,8 @@ func (s *Store) RegisterNewUser(user types.User) error {
 
 func (s *Store) GetUserByEmail(email string) (*types.User, error) {
 	var user types.User
-	err := s.db.QueryRow("SELECT username, email, role FROM users WHERE email = $1", email).Scan(
-		&user.Username, &user.Email, &user.Role)
+	err := s.db.QueryRow("SELECT id,username, email, role, password FROM users WHERE email = $1", email).Scan(
+		&user.ID, &user.Username, &user.Email, &user.Role, &user.Password)
 	if err != nil {
 		return nil, err
 	}
