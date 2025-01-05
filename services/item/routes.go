@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/PatrickA727/mikrotik-db-sys/services/auth"
 	"github.com/PatrickA727/mikrotik-db-sys/types"
 	"github.com/PatrickA727/mikrotik-db-sys/utils"
 	"github.com/go-playground/validator/v10"
@@ -14,16 +15,18 @@ import (
 
 type Handler struct {
 	store types.ItemStore
+	userStore types.UserStore
 }
 
-func NewHandler (store types.ItemStore) *Handler {
+func NewHandler (store types.ItemStore, userStore types.UserStore) *Handler {
 	return &Handler{
 		store: store,
+		userStore: userStore,
 	}
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/register-item", h.handleRegisterItem).Methods("POST")
+	router.HandleFunc("/register-item", auth.WithJWTAuth(h.handleRegisterItem, h.userStore)).Methods("POST")
 	router.HandleFunc("/delete/{rfid_tag}", h.handleDeleteItem).Methods("DELETE")
 	router.HandleFunc("/register-warranty/{rfid_tag}", h.handleActivateNewWarranty).Methods("POST")
 	router.HandleFunc("/item-sold/{rfid_tag}", h.handleItemSold).Methods("POST")

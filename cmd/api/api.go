@@ -25,13 +25,15 @@ func NewAPIServer(listenAddr string, db *sql.DB) *APIServer {
 func (s *APIServer) Run() error {
 	router := mux.NewRouter()
 
-	subrouter_item := router.PathPrefix("/api/item").Subrouter()
+	// Init stores
 	item_store := item.NewStore(s.db)
-	item_handler := item.NewHandler(item_store)
+	user_store := user.NewStore(s.db)
+
+	subrouter_item := router.PathPrefix("/api/item").Subrouter()
+	item_handler := item.NewHandler(item_store, user_store)
 	item_handler.RegisterRoutes(subrouter_item)	
 
 	subrouter_user := router.PathPrefix("/api/user").Subrouter()
-	user_store := user.NewStore(s.db)
 	user_handler := user.NewHandler(user_store)
 	user_handler.RegisterRoutes(subrouter_user)
 

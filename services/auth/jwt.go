@@ -1,11 +1,20 @@
 package auth
 
 import (
+	"fmt"
+	"log"
+	"net/http"
+	"os"
 	"strconv"
 	"time"
-
+	"context"
+	"github.com/PatrickA727/mikrotik-db-sys/types"
+	"github.com/PatrickA727/mikrotik-db-sys/utils"
 	"github.com/golang-jwt/jwt/v5"
 )
+
+type contextKey string
+const UserKey contextKey = "userID"
 
 func CreateJWT(secret []byte, userID int) (string, error) {
 	expiration := time.Second + time.Duration(3600*24*7) 
@@ -21,4 +30,62 @@ func CreateJWT(secret []byte, userID int) (string, error) {
 	}
 
 	return tokenString, nil
+}
+
+func WithJWTAuth(handlerFunc http.HandlerFunc, store types.UserStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get token from cookies
+		tokenString := utils.GetTokenFromCookie(r)
+
+		// Validate JWT
+		token, err := validateJWT(tokenString)
+		if err != nil {
+			log.Println("token not valid: ", err)
+			utils.WriteError(w, http.StatusForbidden, fmt.Errorf("permission denied: %v", err))
+			return
+		}
+
+		if !token.Valid {
+			log.Println("invalid token")
+			utils.WriteError(w, http.StatusForbidden, fmt.Errorf("permission denied: %v", err))
+			return
+		}
+
+		// Get userID from JWT claims
+		claims := token.Claims.(jwt.MapClaims)
+		str := claims["userID"].(string)
+
+		userID, err := strconv.Atoi(str)
+		if err != nil {
+			log.Printf("failed to convert userID to int: %v", err)
+			utils.WriteError(w, http.StatusForbidden, fmt.Errorf("permission denied: %v", err))
+			return
+		}
+
+		// Fetch user by id from database
+		u, err := store.GetUserById(userID)
+		if err != nil {
+			log.Printf("failed to get user by id: %v", err)
+			utils.WriteError(w, http.StatusForbidden, fmt.Errorf("permission denied: %v", err))
+			return
+		}
+
+		// Set the userId to the ctx(context) so the handler functions have access to current user id in the ctx
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, UserKey, u.ID) // Creates a new context that contains UserKey("userid") as the key and user.id as the value
+		r = r.WithContext(ctx)	// Attaches the new context to the original request containing the userID
+
+		// Run the handler func with validated user JWT cookie
+		handlerFunc(w, r)
+	}
+}
+
+func validateJWT(tokenString string) (*jwt.Token, error) {	// Validates JWT by checking its signing method
+	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {	// JWT Parse method takes tokenString and a callback func to check/validate the signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {	// Accesses and checks the token signing method (has to be HMAC)
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])	// Shows the signing metnod of the incorrect jwt token
+		}
+
+		return []byte(os.Getenv("JWT_SECRET")), nil	// returns the secret key
+	})
 }

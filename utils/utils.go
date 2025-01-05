@@ -3,7 +3,9 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+
 	"github.com/go-playground/validator/v10"
 )
 
@@ -26,4 +28,20 @@ func WriteJSON(w http.ResponseWriter, status int, v any) error {
 
 func WriteError(w http.ResponseWriter, status int, err error) {		
 	WriteJSON(w, status, map[string]string{"error": err.Error()})
+}
+
+func GetTokenFromCookie(r *http.Request) string {
+    // Retrieve the "jwt" cookie from the request
+    cookie, err := r.Cookie("jwt")
+    if err != nil {
+		if err == http.ErrNoCookie {
+			log.Println("cookie not found")
+			return ""
+		}
+		
+		log.Println("error getting jwt cookie: ", err)
+        return ""
+    }
+
+    return cookie.Value
 }

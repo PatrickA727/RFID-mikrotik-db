@@ -115,9 +115,10 @@ func (h *Handler) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 		Name:     "jwt",                
 		Value:    token,                      
 		Expires:  time.Now().Add(7 * 24 * time.Hour), 
-		HttpOnly: true,                       
-		Secure:   true,                       // ENABLE ON DEPLOYMENT
-		SameSite: http.SameSiteStrictMode,       
+		HttpOnly: true,	// SET TO TRUE FOR DEPLOY       
+		Path: "/",        
+		Secure:   true,                       
+		SameSite: http.SameSiteLaxMode,       
 	}
 
 	http.SetCookie(w, cookie)
@@ -128,18 +129,18 @@ func (h *Handler) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleLogout (w http.ResponseWriter, r *http.Request) {
 	// Create a cookie with the same name as the JWT cookie
     http.SetCookie(w, &http.Cookie{
-        Name:     "jwt", // Use the same name as your JWT cookie
+        Name:     "jwt",
         Value:    "",
-        // Path:     "/",
-        HttpOnly: true,
+        Path:     "/",
+        HttpOnly: true,	// SET TO TRUE FOR DEPLOY
         Expires:  time.Unix(0, 0), 
         MaxAge:   -1,             
-        Secure:   true,           // ENABLE ON DEPLOYMENT
+        Secure:   true,        
     })
 
 	utils.WriteJSON(w, http.StatusOK, map[string]string{"res": "Successfully logged out"})
 }
 
 func (h *Handler) handleDeleteUser (w http.ResponseWriter, r *http.Request) {
-	
+
 }

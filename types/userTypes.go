@@ -7,6 +7,7 @@ import (
 type UserStore interface {
 	RegisterNewUser(user User) error
 	GetUserByEmail(email string) (*User, error)
+	GetUserById(id int) (*User, error)
 }
 
 type User struct {
