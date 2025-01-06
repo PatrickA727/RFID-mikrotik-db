@@ -101,6 +101,7 @@ func(h *Handler) handleGetItemByRFID(w http.ResponseWriter, r *http.Request) {
 	i, err := h.store.GetItemByRFIDTag(rfid_tag)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error getting item by rfid: %v", err))
+		return
 	}
 
 	utils.WriteJSON(w, http.StatusOK, i)

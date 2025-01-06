@@ -48,11 +48,20 @@ func (s *Store) GetUserByEmail(email string) (*types.User, error) {
 
 func (s *Store) GetUserById(id int) (*types.User, error) {
 	var user types.User
-	err := s.db.QueryRow("SELECT id,username, email, role, password FROM users WHERE id = $1", id).Scan(
-		&user.ID, &user.Username, &user.Email, &user.Role, &user.Password)
+	err := s.db.QueryRow("SELECT id,username, email, role FROM users WHERE id = $1", id).Scan(
+		&user.ID, &user.Username, &user.Email, &user.Role)
 	if err != nil {
 		return nil, err
 	}
 
 	return &user, nil
+}
+
+func (s *Store) DeleteUserById(id int, ctx context.Context) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

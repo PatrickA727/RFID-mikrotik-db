@@ -1,10 +1,12 @@
 package user
 
 import (
+	// "context"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
+
 	"github.com/PatrickA727/mikrotik-db-sys/services/auth"
 	"github.com/PatrickA727/mikrotik-db-sys/types"
 	"github.com/PatrickA727/mikrotik-db-sys/utils"
@@ -26,7 +28,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/register-user", h.handleRegisterUser).Methods("POST")
 	router.HandleFunc("/login", h.handleLoginUser).Methods("POST")
 	router.HandleFunc("/logout", h.handleLogout).Methods("POST")
-
+	router.HandleFunc("/delete-user", auth.WithJWTAuth(h.handleDeleteCurrentUser, h.store)).Methods("DELETE")
 }
 
 func (h *Handler) handleRegisterUser(w http.ResponseWriter, r *http.Request) {
@@ -141,6 +143,45 @@ func (h *Handler) handleLogout (w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, map[string]string{"res": "Successfully logged out"})
 }
 
-func (h *Handler) handleDeleteUser (w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handleDeleteCurrentUser (w http.ResponseWriter, r *http.Request) {
+	// Get current userID from context
+	ctx := r.Context()
+	userID := ctx.Value(auth.UserKey)
+	intID, ok := userID.(int)
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("ID type invalid"))
+		return
+	} 
+	
+	// Get user by id
+	u, err := h.store.GetUserById(intID)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("user not found"))
+		return
+	}
 
+	if u == nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("user not found"))
+		return
+	}
+
+	// Expire cookie
+	http.SetCookie(w, &http.Cookie{
+        Name:     "jwt",
+        Value:    "",
+        Path:     "/",
+        HttpOnly: true,
+        Expires:  time.Unix(0, 0), 
+        MaxAge:   -1,             
+        Secure:   true,        
+    })
+
+	// Delete user
+	err = h.store.DeleteUserById(u.ID, ctx)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error deleting user"))
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]string{"res": "user deleted"})
 }

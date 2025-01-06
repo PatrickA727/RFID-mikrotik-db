@@ -1,6 +1,7 @@
 package types
 
 import (
+	"context"
 	"time"
 )
 
@@ -8,6 +9,7 @@ type UserStore interface {
 	RegisterNewUser(user User) error
 	GetUserByEmail(email string) (*User, error)
 	GetUserById(id int) (*User, error)
+	DeleteUserById(id int, ctx context.Context) error
 }
 
 type User struct {
