@@ -27,8 +27,55 @@ func NewHandler (store types.UserStore) *Handler {
 func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/register-user", h.handleRegisterUser).Methods("POST")
 	router.HandleFunc("/login", h.handleLoginUser).Methods("POST")
-	router.HandleFunc("/logout", h.handleLogout).Methods("POST")
+	router.HandleFunc("/logout", auth.WithJWTAuth(h.handleLogout, h.store)).Methods("POST")
+	router.HandleFunc("/logout-all", auth.WithJWTAuth(h.handleLogoutAllDevice, h.store)).Methods("POST")
 	router.HandleFunc("/delete-user", auth.WithJWTAuth(h.handleDeleteCurrentUser, h.store)).Methods("DELETE")
+	router.HandleFunc("/refresh", h.handleRenewToken).Methods("POST")
+	router.HandleFunc("/auth-client", auth.WithJWTAuth(h.handleCheckAuthClient, h.store)).Methods("GET")
+}
+
+func (h *Handler) handleRenewToken(w http.ResponseWriter, r *http.Request) {
+	refCookie, err := r.Cookie("refresh_token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("permission denied: %v", err))
+			return
+		}
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error retrieving refCookie: %v", err))
+		return
+	}
+
+	sessionExists, userID, err := h.store.CheckSession(refCookie.Value)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error checking session: %v", err))
+		return
+	} 
+
+	if !sessionExists {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("unauthorized, session does not exist"))
+		return
+	} else {
+		secret := []byte(os.Getenv("JWT_SECRET"))
+		token, err := auth.CreateJWT(secret, userID)
+		if err != nil {
+			utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error generating token: %v", err))
+			return
+		}
+
+		accessCookie := &http.Cookie{
+			Name:     "access_token",                
+			Value:    token,                      
+			Expires:  time.Now().Add(time.Duration(30) * time.Second), 
+			HttpOnly: true,	// SET TO TRUE FOR DEPLOY       
+			Path: "/",        
+			Secure:   true,                       
+			SameSite: http.SameSiteLaxMode,       
+		}
+
+		http.SetCookie(w, accessCookie)
+	}
+
+	utils.WriteJSON(w, http.StatusCreated, map[string]string{"msg": "new access token created"})
 }
 
 func (h *Handler) handleRegisterUser(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +123,38 @@ func (h *Handler) handleRegisterUser(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusCreated, "New User Created")
 }
 
+func (h *Handler) handleCheckAuthClient(w http.ResponseWriter, r *http.Request) {
+	// Check cookies
+	cookie, err := r.Cookie("access_token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			utils.WriteError(w, http.StatusNotFound, fmt.Errorf("error no cookie"))
+			return
+		}
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error getting access token: %v", err))
+		return
+	}
+
+	// Validate JWT token
+	token, err := auth.ValidateJWT(cookie.Value)
+	if err != nil {
+		// log.Println("token not valid: ", err)
+		utils.WriteError(w, http.StatusForbidden, fmt.Errorf("permission denied: %v", err))
+		return
+	}
+
+	if !token.Valid {
+		// log.Println("invalid token")
+		utils.WriteError(w, http.StatusForbidden, fmt.Errorf("permission denied: %v", err))
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusAccepted, map[string]string{"msg": "authorized"})
+}
+
 func (h *Handler) handleLoginUser(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	// Get JSON
 	var payload types.LoginPayload
 	if err := utils.ParseJSON(r, &payload); err != nil {
@@ -104,7 +182,7 @@ func (h *Handler) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create JWT token
+	// Create access token
 	secret := []byte(os.Getenv("JWT_SECRET"))
 	token, err := auth.CreateJWT(secret, u.ID)
 	if err != nil {
@@ -112,26 +190,99 @@ func (h *Handler) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create JWT token and log in user
-	cookie := &http.Cookie{
-		Name:     "jwt",                
+	// Create refresh token
+	refToken, err := auth.CreateRefreshJWT(secret, u.ID) 
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error generating token: %v", err))
+		return
+	}
+
+	// Create db session
+	err = h.store.CreateSession(ctx, types.Session{
+		Userid: u.ID,
+		RefreshToken: refToken,
+	})
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error creating session: %v", err))
+		return
+	}
+
+	// Create JWT access token and log in user
+	accessCookie := &http.Cookie{
+		Name:     "access_token",                
 		Value:    token,                      
-		Expires:  time.Now().Add(7 * 24 * time.Hour), 
+		Expires:  time.Now().Add(time.Duration(900) * time.Second), 
 		HttpOnly: true,	// SET TO TRUE FOR DEPLOY       
 		Path: "/",        
 		Secure:   true,                       
 		SameSite: http.SameSiteLaxMode,       
 	}
 
-	http.SetCookie(w, cookie)
+	// Create JWT refresh cookie
+	refreshCookie := &http.Cookie{
+		Name:     "refresh_token",                
+		Value:    refToken,                      
+		Expires:  time.Now().Add(time.Duration(3600 * 24 * 30) * time.Second), 
+		HttpOnly: true,	// SET TO TRUE FOR DEPLOY       
+		Path: "/",        
+		Secure:   true,                       
+		SameSite: http.SameSiteLaxMode,       
+	}
+
+	http.SetCookie(w, accessCookie)
+	http.SetCookie(w, refreshCookie)
 
 	utils.WriteJSON(w, http.StatusOK, nil)
 }
 
 func (h *Handler) handleLogout (w http.ResponseWriter, r *http.Request) {
-	// Create a cookie with the same name as the JWT cookie
+	// Get refresh token
+	cookie, err := r.Cookie("refresh_token")
+    if err != nil {
+        // If there's no cookie, or any error retrieving it
+        if err == http.ErrNoCookie {
+            utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("Refresh token not found"))
+			return
+        } else {
+            utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("Error retrieving refresh token"))
+			return
+        }
+    }
+
+	// Get user ID from context
+	ctx := r.Context()
+	userID := ctx.Value(auth.UserKey)
+	intID, ok := userID.(int)
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("ID type invalid"))
+		return
+	} 
+
+    refreshToken := cookie.Value
+
+	// Revoke Session
+	err = h.store.RevokeSession(types.Session{
+		Userid: intID,
+		RefreshToken: refreshToken,
+	})
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error revoking cookie: %v", err))
+		return
+	}
+
+	// Create a cookie with the same name as the access token and refresh cookie
     http.SetCookie(w, &http.Cookie{
-        Name:     "jwt",
+        Name:     "access_token",
+        Value:    "",
+        Path:     "/",
+        HttpOnly: true,	// SET TO TRUE FOR DEPLOY
+        Expires:  time.Unix(0, 0), 
+        MaxAge:   -1,             
+        Secure:   true,        
+    })
+
+	http.SetCookie(w, &http.Cookie{
+        Name:     "refresh_token",
         Value:    "",
         Path:     "/",
         HttpOnly: true,	// SET TO TRUE FOR DEPLOY
@@ -141,6 +292,47 @@ func (h *Handler) handleLogout (w http.ResponseWriter, r *http.Request) {
     })
 
 	utils.WriteJSON(w, http.StatusOK, map[string]string{"res": "Successfully logged out"})
+}
+
+func (h *Handler) handleLogoutAllDevice (w http.ResponseWriter, r *http.Request) {
+	// Get user ID from context
+	ctx := r.Context()
+	userID := ctx.Value(auth.UserKey)
+
+	intID, ok := userID.(int)
+	if !ok {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("ID type invalid"))
+		return
+	} 
+
+	// logout all sessions with this ID
+	err := h.store.RevokeSessionBulk(intID)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error logging out devices: %v", err))
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+        Name:     "access_token",
+        Value:    "",
+        Path:     "/",
+        HttpOnly: true,	// SET TO TRUE FOR DEPLOY
+        Expires:  time.Unix(0, 0), 
+        MaxAge:   -1,             
+        Secure:   true,        
+    })
+
+	http.SetCookie(w, &http.Cookie{
+        Name:     "refresh_token",
+        Value:    "",
+        Path:     "/",
+        HttpOnly: true,	// SET TO TRUE FOR DEPLOY
+        Expires:  time.Unix(0, 0), 
+        MaxAge:   -1,             
+        Secure:   true,        
+    })
+
+	utils.WriteJSON(w, http.StatusOK, map[string]string{"msg": "Logged out all devices"})
 }
 
 func (h *Handler) handleDeleteCurrentUser (w http.ResponseWriter, r *http.Request) {
@@ -167,10 +359,20 @@ func (h *Handler) handleDeleteCurrentUser (w http.ResponseWriter, r *http.Reques
 
 	// Expire cookie
 	http.SetCookie(w, &http.Cookie{
-        Name:     "jwt",
+        Name:     "access_token",
         Value:    "",
         Path:     "/",
-        HttpOnly: true,
+        HttpOnly: true,	// SET TO TRUE FOR DEPLOY
+        Expires:  time.Unix(0, 0), 
+        MaxAge:   -1,             
+        Secure:   true,        
+    })
+
+	http.SetCookie(w, &http.Cookie{
+        Name:     "refresh_token",
+        Value:    "",
+        Path:     "/",
+        HttpOnly: true,	// SET TO TRUE FOR DEPLOY
         Expires:  time.Unix(0, 0), 
         MaxAge:   -1,             
         Secure:   true,        

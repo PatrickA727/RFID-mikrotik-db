@@ -17,7 +17,23 @@ type contextKey string
 const UserKey contextKey = "userID"
 
 func CreateJWT(secret []byte, userID int) (string, error) {
-	expiration := time.Second + time.Duration(3600*24*7) 
+	expiration := time.Duration(900) * time.Second	// 15 minutes
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{	// Create new JWt token, with claims(key value pairs embedded in the token)
+		"userID": strconv.Itoa(userID),									// Uses the HS256 signing method, its  fast method for single server systems with low complexity
+		"expiredAt": time.Now().Add(expiration).Unix(),
+	})
+
+	tokenString, err := token.SignedString(secret)	// The final token signed with the secret key
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
+}
+
+func CreateRefreshJWT(secret []byte, userID int) (string, error) {
+	expiration := time.Duration(3600 * 24 * 30) * time.Second // 30 days
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{	// Create new JWt token, with claims(key value pairs embedded in the token)
 		"userID": strconv.Itoa(userID),									// Uses the HS256 signing method, its  fast method for single server systems with low complexity
@@ -38,7 +54,7 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store types.UserStore) http.Handl
 		tokenString := utils.GetTokenFromCookie(r)
 
 		// Validate JWT
-		token, err := validateJWT(tokenString)
+		token, err := ValidateJWT(tokenString)
 		if err != nil {
 			log.Println("token not valid: ", err)
 			utils.WriteError(w, http.StatusForbidden, fmt.Errorf("permission denied: %v", err))
@@ -80,12 +96,14 @@ func WithJWTAuth(handlerFunc http.HandlerFunc, store types.UserStore) http.Handl
 	}
 }
 
-func validateJWT(tokenString string) (*jwt.Token, error) {	// Validates JWT by checking its signing method
+func ValidateJWT(tokenString string) (*jwt.Token, error) {	// Validates JWT by checking its signing method
 	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {	// JWT Parse method takes tokenString and a callback func to check/validate the signing method
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {	// Accesses and checks the token signing method (has to be HMAC)
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])	// Shows the signing metnod of the incorrect jwt token
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])	// Shows the signing method of the incorrect jwt token
 		}
 
-		return []byte(os.Getenv("JWT_SECRET")), nil	// returns the secret key
+		return []byte(os.Getenv("JWT_SECRET")), nil	// The CALLBACK FUNC returns the secret key to be used by the jwt.parse func
 	})
 }
+
+// For validateJWT the if statement and checking signing method IS THE CALLBACK PARAM for the jwt.parse function

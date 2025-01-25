@@ -143,7 +143,7 @@ const SellPage = () => {
   return (
     <div className='bg-gray-200'>
       <div className='px-4 pt-2'>
-            <button className="px-2 py-1" onClick={() => navigate("/")}>
+            <button className="px-2 py-1" onClick={() => navigate("/home")}>
                 <FaChevronLeft size={25} />
             </button>
         </div>

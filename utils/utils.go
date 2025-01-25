@@ -31,11 +31,11 @@ func WriteError(w http.ResponseWriter, status int, err error) {
 }
 
 func GetTokenFromCookie(r *http.Request) string {
-    // Retrieve the "jwt" cookie from the request
-    cookie, err := r.Cookie("jwt")
+    // Retrieve the access token cookie from the request
+    cookie, err := r.Cookie("access_token")
     if err != nil {
 		if err == http.ErrNoCookie {
-			log.Println("cookie not found")
+			// log.Println("cookie not found")
 			return ""
 		}
 		

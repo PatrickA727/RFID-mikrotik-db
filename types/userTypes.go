@@ -10,6 +10,10 @@ type UserStore interface {
 	GetUserByEmail(email string) (*User, error)
 	GetUserById(id int) (*User, error)
 	DeleteUserById(id int, ctx context.Context) error
+	CreateSession(ctx context.Context, session Session) error
+	RevokeSession(session Session) error
+	CheckSession(tokenString string) (bool, int, error)
+	RevokeSessionBulk(id int) error
 }
 
 type User struct {
@@ -34,4 +38,9 @@ type LoginPayload struct {
 
 type DeletePayload struct {
 	ID	int 
+}
+
+type Session struct {
+	Userid 			int		`json:"userid" validate:"required"`
+	RefreshToken	string	`json:"refresh_token" validate:"required"`
 }

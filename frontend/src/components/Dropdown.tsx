@@ -34,6 +34,10 @@ const Dropdown = () => {
         toggleDropdown();
     }
 
+    const handleLogout = async () => {
+      
+    }
+
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
       <button
@@ -60,6 +64,13 @@ const Dropdown = () => {
                 className="block w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
               >
                 Sell
+              </button>
+
+              <button
+                onClick={() => handleLogout()}
+                className="block w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
+              >
+                Logout
               </button>
             </li>
           </ul>

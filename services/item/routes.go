@@ -26,11 +26,11 @@ func NewHandler (store types.ItemStore, userStore types.UserStore) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/register-item", auth.WithJWTAuth(h.handleRegisterItem, h.userStore)).Methods("POST")
+	router.HandleFunc("/register-item", h.handleRegisterItem).Methods("POST")
 	router.HandleFunc("/delete/{rfid_tag}", h.handleDeleteItem).Methods("DELETE")
 	router.HandleFunc("/register-warranty/{rfid_tag}", h.handleActivateNewWarranty).Methods("POST")
 	router.HandleFunc("/item-sold/{rfid_tag}", h.handleItemSold).Methods("POST")
-	router.HandleFunc("/get-items", h.handleGetItems).Methods("GET")
+	router.HandleFunc("/get-items", auth.WithJWTAuth(h.handleGetItems, h.userStore)).Methods("GET")
 	router.HandleFunc("/get-types", h.handleGetItemTypes).Methods("GET")
 	router.HandleFunc("/get-warranties", h.handleGetAllWarranties).Methods("GET")
 	router.HandleFunc("/get-sold-items", h.handleGetAllSoldItem).Methods("GET")

@@ -63,14 +63,13 @@ const ItemTypesScreen = () => {
                 console.log("denied");
             }
         } else {
+            console.log("field empty")
             return
         }
     }
 
     const createType = async (item_type: Type) => {
         try {
-            console.log("Item Type: ", item_type.item_type);
-            console.log("Item Price: ", item_type.price);
             const response = await axios.post<Type>(
                 `api/item/register-item-type`,
                 item_type
@@ -144,7 +143,7 @@ const ItemTypesScreen = () => {
   return (
     <div className='bg-gray-200'>
         <div className='px-4 pt-2'>
-            <button className="px-2 py-1" onClick={() => navigate("/")}>
+            <button className="px-2 py-1" onClick={() => navigate("/home")}>
                 <FaChevronLeft size={25} />
             </button>
         </div>
