@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-
+	"github.com/rs/cors"
 	"github.com/PatrickA727/mikrotik-db-sys/services/item"
 	"github.com/PatrickA727/mikrotik-db-sys/services/user"
 	"github.com/gorilla/mux"
@@ -23,6 +23,13 @@ func NewAPIServer(listenAddr string, db *sql.DB) *APIServer {
 }
 
 func (s *APIServer) Run() error {
+	c := cors.New(cors.Options{
+        AllowedOrigins:   []string{"http://localhost:3000"},
+        AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+        AllowedHeaders:   []string{"Content-Type", "Authorization"},
+        AllowCredentials: true,  // Important for cookie authentication
+    })
+
 	router := mux.NewRouter()
 
 	// Init stores
@@ -39,5 +46,5 @@ func (s *APIServer) Run() error {
 
 	log.Println("Listening on port: ", s.ListenAddr)
 
-	return http.ListenAndServe(s.ListenAddr, router)
+	return http.ListenAndServe(s.ListenAddr, c.Handler(router))
 }

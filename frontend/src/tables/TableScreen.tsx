@@ -6,6 +6,7 @@ import { useState, useCallback } from "react";
 import { debounce } from 'lodash';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import api from "../components/AxiosInstance";
 
 interface Item {
   serial_number: number,
@@ -63,13 +64,9 @@ const TableScreen = () => {
 
     const getItems = async (): Promise<{ items: Item[], item_count: number }> => {
         try {
-            const response = await axios.get<{ items: Item[], item_count: number }>(`/api/item/get-items?limit=${limit}&offset=${offset}&search=${search}`);
-
-            if (response.status == 403) {
-                await axios.post(`api/user/refresh`)
-                const response = await axios.get<{ items: Item[], item_count: number }>(`/api/item/get-items?limit=${limit}&offset=${offset}&search=${search}`);
-                return response.data
-            }
+            const response = await api.get<{ items: Item[], item_count: number }>(
+                `/api/item/get-items?limit=${limit}&offset=${offset}&search=${search}`, 
+                {withCredentials: true});
 
             return response.data
         } catch (error) {
