@@ -13,7 +13,7 @@ const AuthRoute = ({ children }) => {
         isLoading: true
     })
 
-    useEffect(() => {
+    useEffect(() => { 
         const validateToken = async () => {
           try {
             const response = await axios.get('/api/user/auth-client', {
@@ -36,7 +36,7 @@ const AuthRoute = ({ children }) => {
         };
     
         validateToken();
-      }, []);
+      }, []);   // This useEffect is triggered on component mount and only once
 
       if (auth.isLoading) {
         return <div>Loading...</div>;

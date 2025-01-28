@@ -24,7 +24,7 @@ const LoginScreen = () => {
 
   const loginUser = async (user: User) => {
     try {
-      console.log("first")
+      // console.log("first")
       const response = await axios.post<User>(
         `api/user/login`,
         user

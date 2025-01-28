@@ -1,6 +1,8 @@
 import { FaChevronDown } from "react-icons/fa"; 
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
 
 // interface DropdownButtonProps {
 //     isOpen: boolean;
@@ -34,8 +36,34 @@ const Dropdown = () => {
         toggleDropdown();
     }
 
+    const logoutUser = async () => {
+      try {
+        const response = await axios.post(
+          `api/user/logout`
+        );
+        console.log("res: ", response)
+      } catch (error) {
+        console.log("error logging in: ", error)
+      }
+    } 
+
+    const { mutate: logoutMutation } = useMutation({
+      mutationFn: logoutUser,
+      onSuccess: () => {
+
+      },
+      onError: () => {
+        console.log("error log out mutation")
+      }
+    })
+
     const handleLogout = async () => {
-      
+      try {
+        await logoutMutation()
+        navigate("/")
+      } catch (error) {
+        console.log("error log in: ", error)
+      }
     }
 
   return (

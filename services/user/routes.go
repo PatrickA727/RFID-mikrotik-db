@@ -211,7 +211,7 @@ func (h *Handler) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 	accessCookie := &http.Cookie{
 		Name:     "access_token",                
 		Value:    token,                      
-		Expires:  time.Now().Add(time.Duration(900) * time.Second), 
+		Expires:  time.Now().Add(time.Duration(20) * time.Second), 
 		HttpOnly: true,	// SET TO TRUE FOR DEPLOY       
 		Path: "/",        
 		Secure:   true,                       
@@ -222,7 +222,7 @@ func (h *Handler) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 	refreshCookie := &http.Cookie{
 		Name:     "refresh_token",                
 		Value:    refToken,                      
-		Expires:  time.Now().Add(time.Duration(3600 * 24 * 30) * time.Second), 
+		Expires:  time.Now().Add(time.Duration(3600 * 24) * time.Second), // 1 day
 		HttpOnly: true,	// SET TO TRUE FOR DEPLOY       
 		Path: "/",        
 		Secure:   true,                       

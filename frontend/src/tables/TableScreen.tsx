@@ -60,13 +60,27 @@ const TableScreen = () => {
             year: 'numeric',
         }).format(new Date(rawDate));
     };
+
+    const getItems = async (): Promise<{ items: Item[], item_count: number }> => {
+        try {
+            const response = await axios.get<{ items: Item[], item_count: number }>(`/api/item/get-items?limit=${limit}&offset=${offset}&search=${search}`);
+
+            if (response.status == 403) {
+                await axios.post(`api/user/refresh`)
+                const response = await axios.get<{ items: Item[], item_count: number }>(`/api/item/get-items?limit=${limit}&offset=${offset}&search=${search}`);
+                return response.data
+            }
+
+            return response.data
+        } catch (error) {
+            console.log(error)
+            return { items: [], item_count: 0 }
+        }
+    }
     
     const { data, error, isLoading, isError } = useQuery<{ items: Item[], item_count: number }>({
         queryKey: ['items', offset, search],    // Refetches when offset/search changes value
-        queryFn: async (): Promise<{ items: Item[], item_count: number }> => { 
-            const { data } = await axios.get<{ items: Item[], item_count: number }>(`/api/item/get-items?limit=${limit}&offset=${offset}&search=${search}`);
-            return data;
-        },
+        queryFn: getItems,
         placeholderData: keepPreviousData,
     });
 
