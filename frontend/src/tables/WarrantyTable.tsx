@@ -1,8 +1,9 @@
-import axios from 'axios';
+// import axios from 'axios';
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Button, ButtonGroup, Text } from "@chakra-ui/react";
 import { useState } from "react";
+import api from '../components/AxiosInstance';
 
 interface Warranty {
     item_sn: number,
@@ -28,7 +29,7 @@ const WarrantyTable = () => {
     const {data, error, isError, isLoading} = useQuery<{ warranties: Warranty[], warranty_count: number }>({
         queryKey: ["warranty", offset, search],
         queryFn: async(): Promise<{ warranties: Warranty[], warranty_count: number }> => {
-            const { data } = await axios.get<{ warranties: Warranty[], warranty_count: number }>(`/api/item/get-warranties?limit=${limit}&offset=${offset}&search=${search}`);
+            const { data } = await api.get<{ warranties: Warranty[], warranty_count: number }>(`/api/item/get-warranties?limit=${limit}&offset=${offset}&search=${search}`);
             return data;
         },
         placeholderData: keepPreviousData,

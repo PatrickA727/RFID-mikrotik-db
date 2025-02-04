@@ -1,9 +1,10 @@
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import axios from 'axios';
+// import axios from 'axios';
 import { useState } from "react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { FaChevronLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import api from '../components/AxiosInstance';
 
 interface Type {
     item_type: string,
@@ -38,7 +39,7 @@ const ItemTypesScreen = () => {
     const { data, error, isLoading, isError } = useQuery<{ types: Type[], count: number }>({
         queryKey: ['types'],
         queryFn: async(): Promise<{ types: Type[], count: number }> => {
-            const { data } = await axios.get<{ types: Type[], count: number }>(`api/item/get-types`);
+            const { data } = await api.get<{ types: Type[], count: number }>(`api/item/get-types`);
             return data
         },
         placeholderData: keepPreviousData,
@@ -70,7 +71,7 @@ const ItemTypesScreen = () => {
 
     const createType = async (item_type: Type) => {
         try {
-            const response = await axios.post<Type>(
+            const response = await api.post<Type>(
                 `api/item/register-item-type`,
                 item_type
             );

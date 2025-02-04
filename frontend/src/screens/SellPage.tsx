@@ -1,11 +1,13 @@
 import { useCallback, useState } from "react"
 import { keepPreviousData, useQuery, useMutation, useQueryClient   } from "@tanstack/react-query";
-import axios from "axios";
+// import axios from "axios";
 import { debounce } from 'lodash';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FaChevronLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import api from "../components/AxiosInstance";
+import { toast } from "react-toastify";
 
 interface Item {
   id: number,
@@ -86,8 +88,10 @@ const SellPage = () => {
           setInvoice('')
           setOlShop('')
           setSelectedItems(new Set())
+          toast.success('Item Sold')
         } catch (error) {
           console.log("error selling items: ", error)
+          toast.error("error")
         }
       } else {
         console.log("denied")
@@ -99,7 +103,7 @@ const SellPage = () => {
 
   const sellItem = async (item_sold:ItemSold) => {
     try {
-      const response = await axios.post<ItemSold>(
+      const response = await api.post<ItemSold>(
         `api/item/item-sold-bulk`,
         item_sold
       )
@@ -122,7 +126,7 @@ const SellPage = () => {
   const { data, error, isLoading, isError } = useQuery<{ items: Item[] }>({
     queryKey: ['items', serialNum],
     queryFn: async (): Promise<{items: Item[]}> => {
-      const { data } = await axios.get<{ items: Item[] }>(`/api/item/get-avail-item?search=${serialNum}`)
+      const { data } = await api.get<{ items: Item[] }>(`/api/item/get-avail-item?search=${serialNum}`)
       return data
     },
     enabled: serialNum.trim() !== '',

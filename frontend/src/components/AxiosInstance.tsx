@@ -23,7 +23,7 @@ api.interceptors.response.use(
                 return api(originalRequest);  // Retry the original request
             } catch (refreshError) {
                 console.error('Refresh token failed, logging out...');
-                // window.location.href = '/';     // Navigate to login page
+                window.location.href = '/';     // Navigate to login page
                 return Promise.reject(refreshError);    // Reject request on refresh fail
               }
         }

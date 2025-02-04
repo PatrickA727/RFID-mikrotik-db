@@ -1,9 +1,10 @@
-import axios from 'axios';
+// import axios from 'axios';
 import { keepPreviousData, useQuery, useMutation } from "@tanstack/react-query";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Button, ButtonGroup, Text } from "@chakra-ui/react";
 import { useEffect, useState, useCallback } from "react";
 import { debounce } from 'lodash';
+import api from '../components/AxiosInstance';
 
 interface ItemSold {
     item_sn: number,
@@ -47,7 +48,7 @@ const ItemSoldTable = () => {
     const {data, error, isError, isLoading} = useQuery<{ sold_items: ItemSold[], sold_items_count: number }>({
         queryKey: ["soldItem", offset, search],
         queryFn: async(): Promise<{ sold_items: ItemSold[], sold_items_count: number }> => {
-            const { data } = await axios.get<{ sold_items: ItemSold[], sold_items_count: number }>(`api/item/get-sold-items?limit=${limit}&offset=${offset}&search=${search}`);
+            const { data } = await api.get<{ sold_items: ItemSold[], sold_items_count: number }>(`api/item/get-sold-items?limit=${limit}&offset=${offset}&search=${search}`);
             console.log('HIT: ', data)
             return data
         },
@@ -56,7 +57,7 @@ const ItemSoldTable = () => {
 
     const updateItem = async (updatedItem: ItemSold): Promise<ItemSold | null> => {
         try {
-            const response = await axios.patch<ItemSold>(
+            const response = await api.patch<ItemSold>(
                 "/api/item/edit-item-sold", 
                 updatedItem, 
                 {

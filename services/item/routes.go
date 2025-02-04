@@ -26,20 +26,21 @@ func NewHandler (store types.ItemStore, userStore types.UserStore) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/register-item", h.handleRegisterItem).Methods("POST")
-	router.HandleFunc("/delete/{rfid_tag}", h.handleDeleteItem).Methods("DELETE")
+	router.HandleFunc("/register-item", utils.MobileAuth(h.handleRegisterItem)).Methods("POST")	// Mobile App
+	router.HandleFunc("/delete/{rfid_tag}", auth.WithJWTAuth(h.handleDeleteItem, h.userStore)).Methods("DELETE")
 	router.HandleFunc("/register-warranty/{rfid_tag}", h.handleActivateNewWarranty).Methods("POST")
-	router.HandleFunc("/item-sold/{rfid_tag}", h.handleItemSold).Methods("POST")
+	router.HandleFunc("/item-sold/{rfid_tag}", auth.WithJWTAuth(h.handleItemSold, h.userStore)).Methods("POST")
 	router.HandleFunc("/get-items", auth.WithJWTAuth(h.handleGetItems, h.userStore)).Methods("GET")
-	router.HandleFunc("/get-types", h.handleGetItemTypes).Methods("GET")
-	router.HandleFunc("/get-warranties", h.handleGetAllWarranties).Methods("GET")
-	router.HandleFunc("/get-sold-items", h.handleGetAllSoldItem).Methods("GET")
-	router.HandleFunc("/item-sold-bulk", h.handleItemSoldBulk).Methods("POST")
-	router.HandleFunc("/ship-items", h.handleShipItems).Methods("PATCH")
-	router.HandleFunc("/edit-item-sold", h.handleUpdateSoldItem).Methods("PATCH")
-	router.HandleFunc("/get-item-rfid/{rfid_tag}", h.handleGetItemByRFID).Methods("GET")
-	router.HandleFunc("/register-item-type", h.handleCreateItemType).Methods("POST")
-	router.HandleFunc("/get-avail-item", h.handleGetAvailItemBySN).Methods("GET")
+	router.HandleFunc("/get-types", utils.MobileAuth(h.handleGetItemTypes)).Methods("GET")	// Mobile App
+	router.HandleFunc("/get-warranties", auth.WithJWTAuth(h.handleGetAllWarranties, h.userStore)).Methods("GET")
+	router.HandleFunc("/get-sold-items", auth.WithJWTAuth(h.handleGetAllSoldItem, h.userStore)).Methods("GET")
+	router.HandleFunc("/item-sold-bulk", auth.WithJWTAuth(h.handleItemSoldBulk, h.userStore)).Methods("POST")
+	router.HandleFunc("/ship-items", utils.MobileAuth(h.handleShipItems)).Methods("PATCH")	// Mobile App
+	router.HandleFunc("/edit-item-sold", auth.WithJWTAuth(h.handleUpdateSoldItem, h.userStore)).Methods("PATCH")
+	router.HandleFunc("/get-item-rfid/{rfid_tag}", auth.WithJWTAuth(h.handleGetItemByRFID, h.userStore)).Methods("GET")	// Unused
+	router.HandleFunc("/get-sold-by-rfid/{rfid_tag}", utils.MobileAuth(h.handleGetSoldItem)).Methods("GET")	// Mobile App
+	router.HandleFunc("/register-item-type", auth.WithJWTAuth(h.handleCreateItemType, h.userStore)).Methods("POST")
+	router.HandleFunc("/get-avail-item", auth.WithJWTAuth(h.handleGetAvailItemBySN, h.userStore)).Methods("GET")
 }
 
 func (h *Handler) handleRegisterItem(w http.ResponseWriter, r *http.Request) {
@@ -92,6 +93,19 @@ func (h *Handler) handleDeleteItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteJSON(w, http.StatusOK, "item deleted")
+}
+
+func (h *Handler) handleGetSoldItem(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	rfid_tag := vars["rfid_tag"]
+
+	i, err := h.store.GetSoldItemByRFID(rfid_tag)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error getting sold item rfid: %v", err))
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, i)
 }
 
 func(h *Handler) handleGetItemByRFID(w http.ResponseWriter, r *http.Request) {
@@ -480,6 +494,8 @@ func (h *Handler) handleCreateItemType(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleGetItemTypes (w http.ResponseWriter, r *http.Request) {
+
+
 	item_types, err := h.store.GetItemTypes()
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error getting types: %v", err));

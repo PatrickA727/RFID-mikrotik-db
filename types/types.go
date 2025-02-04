@@ -12,6 +12,7 @@ type ItemStore interface {
 	CreateItemType(item_type ItemType) error
 	DeleteItemByRFID(rfid_tag string) error
 	GetItemByRFIDTag(rfid_tag string) (*Item, error)
+	GetSoldItemByRFID(rfid_tag string) (*Item, error)
 	GetItemByIdSearch(search string) ([]ItemSellingResponse, error)
 	GetItems(limit int, offset int, search string) ([]Item ,int, error)
 	CreateWarranty(warranty Warranty,  ctx context.Context) error

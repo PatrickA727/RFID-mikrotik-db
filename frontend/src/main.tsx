@@ -20,8 +20,16 @@ const router = createBrowserRouter(
             <HomeScreen/>
           </AuthRoute>
         }/>
-      <Route path='/type' element={<ItemTypesScreen/>}/>
-      <Route path='/sell' element={<SellPage/>}/>
+      <Route path='/type' element={
+          <AuthRoute>
+            <ItemTypesScreen/>
+          </AuthRoute>
+        }/>
+      <Route path='/sell' element={
+          <AuthRoute>
+            <SellPage/>
+          </AuthRoute>
+        }/>
       <Route index={true} path='/' element={<LoginScreen/>}/>
     </Route>
   )

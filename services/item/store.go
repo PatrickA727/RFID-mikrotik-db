@@ -77,8 +77,21 @@ func (s *Store) GetItemTypes() ([]types.ItemType, error) {
 func (s *Store) GetItemByRFIDTag(rfid_tag string) (*types.Item, error) {
 	var item types.Item
 
-	err := s.db.QueryRow("SELECT id, serial_number, rfid_tag, item_name, sold, modal, keuntungan, quantity, batch FROM items WHERE rfid_tag = $1", rfid_tag).Scan(
-		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, &item.Sold, &item.Modal, &item.Keuntungan, &item.Quantity, &item.Batch,
+	err := s.db.QueryRow("SELECT id, serial_number, rfid_tag, item_name, sold, modal, keuntungan, quantity, batch, type_ref FROM items WHERE rfid_tag = $1", rfid_tag).Scan(
+		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, &item.Sold, &item.Modal, &item.Keuntungan, &item.Quantity, &item.Batch, &item.TypeRef,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+func (s *Store) GetSoldItemByRFID(rfid_tag string) (*types.Item, error) {
+	var item types.Item
+
+	err := s.db.QueryRow("SELECT id, serial_number, rfid_tag, type_ref FROM items WHERE rfid_tag = $1 AND status = $2", rfid_tag, "sold-pending").Scan(
+		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.TypeRef,
 	)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+// import axios from 'axios';
+import api from './AxiosInstance';
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -16,7 +17,7 @@ const AuthRoute = ({ children }) => {
     useEffect(() => { 
         const validateToken = async () => {
           try {
-            const response = await axios.get('/api/user/auth-client', {
+            const response = await api.get('/api/user/auth-client', {
               withCredentials: true // Important for sending cookies
             });
     

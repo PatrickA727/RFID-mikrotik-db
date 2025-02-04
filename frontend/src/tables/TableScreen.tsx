@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, ButtonGroup, Text } from "@chakra-ui/react";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import axios from 'axios';
+// import axios from 'axios';
 import { useState, useCallback } from "react";
 import { debounce } from 'lodash';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -95,7 +95,7 @@ const TableScreen = () => {
     const deleteItem = async (epc_tag: string) => {
         try {
             console.log("TAG: ", epc_tag);
-            const response = await axios.delete<Item>(
+            const response = await api.delete<Item>(
                 `api/item/delete/${epc_tag}`
             );
             console.log("response:", response);

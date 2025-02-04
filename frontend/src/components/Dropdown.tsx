@@ -2,12 +2,8 @@ import { FaChevronDown } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
-
-// interface DropdownButtonProps {
-//     isOpen: boolean;
-//     toggleDropdown: () => void;
-//   }
+// import axios from "axios";
+import api from "./AxiosInstance";
 
 const Dropdown = () => {
     const [isOpen, setIsOpen] = useState(false)
@@ -38,7 +34,7 @@ const Dropdown = () => {
 
     const logoutUser = async () => {
       try {
-        const response = await axios.post(
+        const response = await api.post(
           `api/user/logout`
         );
         console.log("res: ", response)
@@ -57,12 +53,42 @@ const Dropdown = () => {
       }
     })
 
+    const logoutAllUser = async () => {
+      try {
+        const response = await api.post(
+          `api/user/logout-all`
+        )
+        console.log("res: ", response)
+      } catch (error) {
+        console.log("error logging out all devices: ", error)
+      }
+    }
+
+    const { mutate: logoutAllMutation } = useMutation({
+      mutationFn: logoutAllUser,
+      onSuccess: () => {
+
+      },
+      onError: () => {
+        console.log("error logging out all devices")
+      }
+    })
+
     const handleLogout = async () => {
       try {
         await logoutMutation()
         navigate("/")
       } catch (error) {
-        console.log("error log in: ", error)
+        console.log("error log out: ", error)
+      }
+    }
+
+    const handleLogoutAll = async () => {
+      try {
+        await logoutAllMutation()
+        navigate("/")
+      } catch (error) {
+        console.log("error log out all: ", error)
       }
     }
 
@@ -99,6 +125,13 @@ const Dropdown = () => {
                 className="block w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
               >
                 Logout
+              </button>
+
+              <button
+                onClick={() => handleLogoutAll()}
+                className="block w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
+              >
+                Logout All Logged Devices
               </button>
             </li>
           </ul>

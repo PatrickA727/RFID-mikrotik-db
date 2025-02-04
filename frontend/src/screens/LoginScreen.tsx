@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface User {
@@ -13,6 +13,25 @@ const LoginScreen = () => {
   const [password, setPassword] = useState("")
 
   const navigate = useNavigate()
+
+  useEffect(() => { 
+    const validateToken = async () => {
+        try {
+            const response = await axios.get('/api/user/auth-client', {
+                withCredentials: true // Important for sending cookies
+            });
+            if (response.status < 300 || response.status > 199) {
+                navigate("/home");
+            } else {
+              console.log(response.status)
+            }
+        } catch(error) { 
+            console.log(error)
+        }
+    };
+
+    validateToken();
+    }, []);
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value)

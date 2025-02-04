@@ -25,7 +25,7 @@ func NewHandler (store types.UserStore) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/register-user", h.handleRegisterUser).Methods("POST")
+	router.HandleFunc("/register-user", auth.WithJWTAuth(h.handleRegisterUser, h.store)).Methods("POST")
 	router.HandleFunc("/login", h.handleLoginUser).Methods("POST")
 	router.HandleFunc("/logout", auth.WithJWTAuth(h.handleLogout, h.store)).Methods("POST")
 	router.HandleFunc("/logout-all", auth.WithJWTAuth(h.handleLogoutAllDevice, h.store)).Methods("POST")
@@ -65,7 +65,7 @@ func (h *Handler) handleRenewToken(w http.ResponseWriter, r *http.Request) {
 		accessCookie := &http.Cookie{
 			Name:     "access_token",                
 			Value:    token,                      
-			Expires:  time.Now().Add(time.Duration(30) * time.Second), 
+			Expires:  time.Now().Add(time.Duration(600) * time.Second), 
 			HttpOnly: true,	// SET TO TRUE FOR DEPLOY       
 			Path: "/",        
 			Secure:   true,                       
@@ -211,7 +211,7 @@ func (h *Handler) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 	accessCookie := &http.Cookie{
 		Name:     "access_token",                
 		Value:    token,                      
-		Expires:  time.Now().Add(time.Duration(20) * time.Second), 
+		Expires:  time.Now().Add(time.Duration(600) * time.Second), 
 		HttpOnly: true,	// SET TO TRUE FOR DEPLOY       
 		Path: "/",        
 		Secure:   true,                       
