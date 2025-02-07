@@ -26,19 +26,19 @@ func NewHandler (store types.ItemStore, userStore types.UserStore) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/register-item", utils.MobileAuth(h.handleRegisterItem)).Methods("POST")	// Mobile App
+	router.HandleFunc("/register-item", auth.MobileAuth(h.handleRegisterItem, h.userStore)).Methods("POST")	// Mobile App
 	router.HandleFunc("/delete/{rfid_tag}", auth.WithJWTAuth(h.handleDeleteItem, h.userStore)).Methods("DELETE")
 	router.HandleFunc("/register-warranty/{rfid_tag}", h.handleActivateNewWarranty).Methods("POST")
 	router.HandleFunc("/item-sold/{rfid_tag}", auth.WithJWTAuth(h.handleItemSold, h.userStore)).Methods("POST")
 	router.HandleFunc("/get-items", auth.WithJWTAuth(h.handleGetItems, h.userStore)).Methods("GET")
-	router.HandleFunc("/get-types", utils.MobileAuth(h.handleGetItemTypes)).Methods("GET")	// Mobile App
+	router.HandleFunc("/get-types", auth.MobileAuth(h.handleGetItemTypes, h.userStore)).Methods("GET")	// Mobile App
 	router.HandleFunc("/get-warranties", auth.WithJWTAuth(h.handleGetAllWarranties, h.userStore)).Methods("GET")
 	router.HandleFunc("/get-sold-items", auth.WithJWTAuth(h.handleGetAllSoldItem, h.userStore)).Methods("GET")
 	router.HandleFunc("/item-sold-bulk", auth.WithJWTAuth(h.handleItemSoldBulk, h.userStore)).Methods("POST")
-	router.HandleFunc("/ship-items", utils.MobileAuth(h.handleShipItems)).Methods("PATCH")	// Mobile App
+	router.HandleFunc("/ship-items", auth.MobileAuth(h.handleShipItems, h.userStore)).Methods("PATCH")	// Mobile App
 	router.HandleFunc("/edit-item-sold", auth.WithJWTAuth(h.handleUpdateSoldItem, h.userStore)).Methods("PATCH")
 	router.HandleFunc("/get-item-rfid/{rfid_tag}", auth.WithJWTAuth(h.handleGetItemByRFID, h.userStore)).Methods("GET")	// Unused
-	router.HandleFunc("/get-sold-by-rfid/{rfid_tag}", utils.MobileAuth(h.handleGetSoldItem)).Methods("GET")	// Mobile App
+	router.HandleFunc("/get-sold-by-rfid/{rfid_tag}", auth.MobileAuth(h.handleGetSoldItem, h.userStore)).Methods("GET")	// Mobile App
 	router.HandleFunc("/register-item-type", auth.WithJWTAuth(h.handleCreateItemType, h.userStore)).Methods("POST")
 	router.HandleFunc("/get-avail-item", auth.WithJWTAuth(h.handleGetAvailItemBySN, h.userStore)).Methods("GET")
 }
