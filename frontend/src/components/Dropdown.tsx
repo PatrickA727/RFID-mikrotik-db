@@ -75,20 +75,24 @@ const Dropdown = () => {
     })
 
     const handleLogout = async () => {
-      try {
-        await logoutMutation()
-        navigate("/")
-      } catch (error) {
-        console.log("error log out: ", error)
+      if (window.confirm("Are you sure you want to log out?")) {
+        try {
+          await logoutMutation()
+          navigate("/")
+        } catch (error) {
+          console.log("error log out: ", error)
+        }
       }
     }
 
     const handleLogoutAll = async () => {
-      try {
-        await logoutAllMutation()
-        navigate("/")
-      } catch (error) {
-        console.log("error log out all: ", error)
+      if (window.confirm("Are you sure you want to log out all devices?")) {
+        try {
+          await logoutAllMutation()
+          navigate("/")
+        } catch (error) {
+          console.log("error log out all: ", error)
+        }
       }
     }
 

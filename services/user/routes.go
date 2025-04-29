@@ -169,6 +169,9 @@ func (h *Handler) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Email sanitation
+	payload.Email = utils.SanitizeInput(payload.Email)
+
 	// Check if user email exists
 	u, err := h.store.GetUserByEmail(payload.Email)
 	if err != nil {
@@ -241,10 +244,10 @@ func (h *Handler) handleLogout (w http.ResponseWriter, r *http.Request) {
     if err != nil {
         // If there's no cookie, or any error retrieving it
         if err == http.ErrNoCookie {
-            utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("Refresh token not found"))
+            utils.WriteError(w, http.StatusUnauthorized, fmt.Errorf("refresh token not found"))
 			return
         } else {
-            utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("Error retrieving refresh token"))
+            utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error retrieving refresh token"))
 			return
         }
     }

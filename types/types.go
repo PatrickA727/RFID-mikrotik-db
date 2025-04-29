@@ -18,14 +18,18 @@ type ItemStore interface {
 	CreateWarranty(warranty Warranty,  ctx context.Context) error
 	GetWarrantyByItemId(item_id int) (*Warranty, error)
 	GetAllWarranty(limit int, offset int, search string) ([]Warranty, int, error)
-	NewItemSold(sold_item SoldItem, quantity int, ctx context.Context) error
+	NewItemSold(sold_item SoldItem, quantity int, tx *sql.Tx, ctx context.Context) error
 	GetItemCount(search string) (int, error)
 	GetWarrantyCount(search string) (int, error)
 	GetSoldItemsCount (search string) (int, error)
 	GetAllSoldItems(limit int, offset int, search string) ([]SoldItem, int, error)
 	UpdateItemSold(updated_solditem SoldItem) error
 	GetItemTypes() ([]ItemType, error)
-	ShipItem(item_id int, ctx context.Context) error
+	ShipItem(item_id int, tx *sql.Tx, ctx context.Context) error
+	GetItemsByInvoice (invoice_id int) ([]SoldItem, error)
+	GetInvoices (invoice string) ([]Invoice, error)
+	CreateInvoice(invoice string, ol_shop string, tx *sql.Tx, ctx context.Context) (int, error)
+	ShipInvoice (invoice_id int, tx *sql.Tx, ctx context.Context) error
 }
 
 type Item struct {
@@ -91,12 +95,15 @@ type SoldItem struct {
 	ID				int 		`json:"id"`
 	ItemID			int 		`json:"item_id"`
 	ItemSN			string		`json:"item_sn"`
+	ItemTag			string		`json:"item_tag"`
 	Status			string		`json:"status"`
 	DatetimeSold	time.Time 	`json:"datetime_sold"`
 	Invoice			string		`json:"invoice"`
+	InvoiceID		int			`json:"invoice_id"`
 	OnlineShop		string		`json:"ol_shop"`
 	PaymentStatus	bool		`json:"payment_status"`
 	Journal			bool 		`json:"journal"`
+	ItemType		string		`json:"item_type"`
 }
 
 type RegisterItemPayload struct {
@@ -136,5 +143,18 @@ type SoldItemBulkPayload struct {
 }
 
 type ShipItemsPayload struct {
-	ItemTags	[]string	`json:"item_tags" validate:"required"`
+	InvoiceID		int		`json:"invoice_id" validate:"required"`
+}
+
+type Invoice struct {
+	ID				int		`json:"id"`
+	InvoiceStr		string		`json:"invoice_str"`
+}
+type InvoicePayload struct {
+	ID			int		`json:"id" validate:"required"`
+	InvoiceStr	string	`json:"invoice_str" validate:"required"`
+}
+
+type InvoiceItemsResponse struct {
+	SoldItems 	[]SoldItem	`json:"sold_items"`
 }

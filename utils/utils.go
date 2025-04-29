@@ -3,8 +3,11 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"log"
 	"net/http"
+	"strings"
+	"regexp"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -43,4 +46,11 @@ func GetTokenFromCookie(r *http.Request) string {
     }
 
     return cookie.Value
+}
+
+func SanitizeInput(input string) string {
+	input = strings.TrimSpace(input)
+	input = html.EscapeString(input)	// Changes the HTML characters such as <, >, etc so it cant run a script
+	re := regexp.MustCompile(`[^\w\s@.-]`)	// Removes unallowed characters such as %, $, &, etc
+	return re.ReplaceAllString(input, "")	// Usees the regex from before "re"
 }

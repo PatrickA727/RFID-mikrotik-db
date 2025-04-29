@@ -347,29 +347,31 @@ func (s *Store) GetWarrantyCount(search string) (int, error) {
 	return warrantyCount, nil
 }
 
-func (s *Store) NewItemSold(sold_item types.SoldItem, quantity int, ctx context.Context) error {
-	tx, err := s.BeginTransaction(ctx)
+func (s *Store) CreateInvoice(invoice string, ol_shop string, tx *sql.Tx, ctx context.Context) (int, error) {
+	invoice_id := 0
+
+	_, err := tx.ExecContext(ctx, 
+	`INSERT INTO invoice (invoice_str, online_shop) VALUES ($1, $2)`, invoice, ol_shop)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	defer func() {	
-		if err != nil {
-			if rbErr := tx.Rollback(); rbErr != nil {
-				log.Printf("failed to rollback transaction: %v", rbErr)
-				return
-			}
-			return
-		}
-		if commitErr := tx.Commit(); commitErr != nil {
-			log.Printf("failed to commit transaction: %v", commitErr)
-			return
-		}
-	}()
+	err = tx.QueryRowContext(ctx, `SELECT id FROM invoice WHERE invoice_str = $1`, invoice).Scan(&invoice_id)
+	if err != nil {
+		return 0, err
+	}
+
+	return invoice_id, nil
+}
+
+func (s *Store) NewItemSold(sold_item types.SoldItem, quantity int, tx *sql.Tx, ctx context.Context) error {
+	var (
+		err error
+	)
 
 	_, err = tx.ExecContext(ctx,
-		"INSERT INTO sold_items (item_id, invoice, ol_shop) VALUES ($1, $2, $3)",
-			sold_item.ItemID, sold_item.Invoice, sold_item.OnlineShop,
+		"INSERT INTO sold_items (item_id, invoice, ol_shop, invoice_id) VALUES ($1, $2, $3, $4)",
+			sold_item.ItemID, sold_item.Invoice, sold_item.OnlineShop, sold_item.InvoiceID,
 		)
 	if err != nil {
 		return err
@@ -478,29 +480,77 @@ func (s *Store) GetSoldItemsCount (search string) (int, error) {
 	return soldItemsCount, nil
 }
 
-func (s *Store) ShipItem(item_id int, ctx context.Context) error {
-	tx, err := s.BeginTransaction(ctx)
+func (s *Store) ShipItem(item_id int, tx *sql.Tx, ctx context.Context) error {
+	_, err := tx.ExecContext(ctx, 
+		"UPDATE items SET status = $1 WHERE id = $2 AND status = $3", "sold-shipped", item_id, "sold-pending",
+	)
 	if err != nil {
 		return err
 	}
 
-	defer func() {	
-		if err != nil {
-			if rbErr := tx.Rollback(); rbErr != nil {
-				log.Printf("failed to rollback transaction: %v", rbErr)
-				return
-			}
-			return
-		}
-		if commitErr := tx.Commit(); commitErr != nil {
-			log.Printf("failed to commit transaction: %v", commitErr)
-			return
-		}
-	}()
+	return nil
+}
 
-	_, err = tx.ExecContext(ctx, 
-		"UPDATE items SET status = $1 WHERE id = $2 AND status = $3", "sold-shipped", item_id, "sold-pending",
-	)
+func (s *Store) GetItemsByInvoice (invoice_id int) ([]types.SoldItem, error) {
+	var items []types.SoldItem
+
+	rows, err := s.db.Query(`SELECT i.id, i.rfid_tag, i.type_ref 
+							FROM sold_items s JOIN items i ON s.item_id = i.id
+							WHERE s.invoice_id = $1`, invoice_id);
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		var item types.SoldItem
+
+		if err = rows.Scan(&item.ID, &item.ItemTag, &item.ItemType); err != nil {
+			return nil, err
+		}
+
+		items = append(items, item)
+	}
+
+	if err = rows.Err(); err != nil {
+        return nil, err
+    }
+
+	return items, nil
+}
+
+func (s *Store) GetInvoices (invoice string) ([]types.Invoice, error) {
+	searchPattern := invoice + "%"
+
+	rows, err := s.db.Query(`SELECT id, invoice_str FROM invoice
+							 WHERE invoice_str ILIKE $1
+							 ORDER BY id DESC LIMIT 10`, searchPattern)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+	var invoices []types.Invoice
+
+	for rows.Next() {
+		var invoice types.Invoice
+
+		if err := rows.Scan(&invoice.ID, &invoice.InvoiceStr); err != nil {
+			return nil, err
+		}
+
+		invoices = append(invoices, invoice)
+	}
+
+	if err = rows.Err(); err != nil {
+        return nil, err
+    }
+
+	return invoices, nil
+}
+
+func (s *Store) ShipInvoice (invoice_id int, tx *sql.Tx, ctx context.Context) error {
+	_, err := tx.ExecContext(ctx, `UPDATE invoice SET status = $1 WHERE id = $2`, "shipped", invoice_id)
 	if err != nil {
 		return err
 	}
