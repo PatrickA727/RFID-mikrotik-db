@@ -30,6 +30,9 @@ type ItemStore interface {
 	GetInvoices (invoice string) ([]Invoice, error)
 	CreateInvoice(invoice string, ol_shop string, tx *sql.Tx, ctx context.Context) (int, error)
 	ShipInvoice (invoice_id int, tx *sql.Tx, ctx context.Context) error
+	GetAllInvoice (limit int, offset int, invoice string, status string) ([]Invoice, int, error)
+	GetItemStatusCount() (int, int, int, error)
+	GetItemTypeCount() (map[string]int, error)
 }
 
 type Item struct {
@@ -147,8 +150,10 @@ type ShipItemsPayload struct {
 }
 
 type Invoice struct {
-	ID				int		`json:"id"`
+	ID				int			`json:"id"`
 	InvoiceStr		string		`json:"invoice_str"`
+	Status			string		`json:"status"`
+	OnlineShop		string		`json:"online_shop"`
 }
 type InvoicePayload struct {
 	ID			int		`json:"id" validate:"required"`
@@ -157,4 +162,15 @@ type InvoicePayload struct {
 
 type InvoiceItemsResponse struct {
 	SoldItems 	[]SoldItem	`json:"sold_items"`
+}
+
+type InvoicesResponse struct {
+	Invoices 	[]Invoice	`json:"invoices"`
+	Count 		int			`json:"count"`
+}
+
+type ItemStatusCount struct {
+	NotSold		int		`json:"not_sold"`
+	SoldPending	int		`json:"sold_pending"`
+	SoldShipped	int		`json:"sold_shipped"`
 }

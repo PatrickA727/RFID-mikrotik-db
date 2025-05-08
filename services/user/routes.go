@@ -31,14 +31,14 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/logout-all", auth.WithJWTAuth(h.handleLogoutAllDevice, h.store)).Methods("POST")
 	router.HandleFunc("/delete-user", auth.WithJWTAuth(h.handleDeleteCurrentUser, h.store)).Methods("DELETE")
 	router.HandleFunc("/refresh", h.handleRenewToken).Methods("POST")
-	router.HandleFunc("/auth-client", auth.WithJWTAuth(h.handleCheckAuthClient, h.store)).Methods("GET")
+	router.HandleFunc("/auth-client-mk", auth.WithJWTAuth(h.handleCheckAuthClient, h.store)).Methods("GET")
 }
 
 func (h *Handler) handleRenewToken(w http.ResponseWriter, r *http.Request) {
 	refCookie, err := r.Cookie("refresh_token")
 	if err != nil {
 		if err == http.ErrNoCookie {
-			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("permission denied: %v", err))
+			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("permission denied3: %v", err))
 			return
 		}
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error retrieving refCookie: %v", err))
@@ -69,7 +69,7 @@ func (h *Handler) handleRenewToken(w http.ResponseWriter, r *http.Request) {
 			HttpOnly: true,	// SET TO TRUE FOR DEPLOY       
 			Path: "/",        
 			Secure:   true,                       
-			SameSite: http.SameSiteLaxMode,       
+			SameSite: http.SameSiteNoneMode,       
 		}
 
 		http.SetCookie(w, accessCookie)
@@ -139,13 +139,13 @@ func (h *Handler) handleCheckAuthClient(w http.ResponseWriter, r *http.Request) 
 	token, err := auth.ValidateJWT(cookie.Value)
 	if err != nil {
 		// log.Println("token not valid: ", err)
-		utils.WriteError(w, http.StatusForbidden, fmt.Errorf("permission denied: %v", err))
+		utils.WriteError(w, http.StatusForbidden, fmt.Errorf("permission denied1: %v", err))
 		return
 	}
 
 	if !token.Valid {
 		// log.Println("invalid token")
-		utils.WriteError(w, http.StatusForbidden, fmt.Errorf("permission denied: %v", err))
+		utils.WriteError(w, http.StatusForbidden, fmt.Errorf("permission denied2: %v", err))
 		return
 	}
 
@@ -214,11 +214,11 @@ func (h *Handler) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 	accessCookie := &http.Cookie{
 		Name:     "access_token",                
 		Value:    token,                      
-		Expires:  time.Now().Add(time.Duration(600) * time.Second), 
+		Expires:  time.Now().Add(time.Duration(10) * time.Second), 
 		HttpOnly: true,	// SET TO TRUE FOR DEPLOY       
 		Path: "/",        
 		Secure:   true,                       
-		SameSite: http.SameSiteLaxMode,       
+		SameSite: http.SameSiteNoneMode,       
 	}
 
 	// Create JWT refresh cookie
@@ -229,7 +229,7 @@ func (h *Handler) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,	// SET TO TRUE FOR DEPLOY       
 		Path: "/",        
 		Secure:   true,                       
-		SameSite: http.SameSiteLaxMode,       
+		SameSite: http.SameSiteNoneMode,       
 	}
 
 	http.SetCookie(w, accessCookie)

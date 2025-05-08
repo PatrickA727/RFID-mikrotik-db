@@ -42,8 +42,11 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/get-sold-by-rfid/{rfid_tag}", auth.MobileAuth(h.handleGetSoldItem, h.userStore)).Methods("GET")	// Mobile App
 	router.HandleFunc("/register-item-type", auth.WithJWTAuth(h.handleCreateItemType, h.userStore)).Methods("POST")
 	router.HandleFunc("/get-avail-item", auth.WithJWTAuth(h.handleGetAvailItemBySN, h.userStore)).Methods("GET")
-	router.HandleFunc("/get-invoice-items/{id}", auth.WithJWTAuth(h.handleGetItemsByInvoice, h.userStore)).Methods("GET") // Mobile App
-	router.HandleFunc("/get-invoices", auth.WithJWTAuth(h.handleGetInvoices, h.userStore)).Methods("GET") // Mobile App
+	router.HandleFunc("/get-invoice-items/{id}", auth.MobileAuth(h.handleGetItemsByInvoice, h.userStore)).Methods("GET") // Mobile App
+	router.HandleFunc("/get-invoices", auth.MobileAuth(h.handleGetInvoices, h.userStore)).Methods("GET") // Mobile App
+	router.HandleFunc("/get-all-invoices", auth.WithJWTAuth(h.handleGetAllInvoice, h.userStore)).Methods("GET")
+	router.HandleFunc("/get-status-count", auth.WithJWTAuth(h.handleGetItemStatusCount, h.userStore)).Methods("GET")
+	router.HandleFunc("/get-type-count", auth.WithJWTAuth(h.handleGetItemTypeCount, h.userStore)).Methods("GET")
 }
 
 func (h *Handler) handleRegisterItem(w http.ResponseWriter, r *http.Request) {
@@ -149,7 +152,7 @@ func (h *Handler) handleGetItems(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(items) == 0 {
-		utils.WriteJSON(w, http.StatusOK, []types.Item{})
+		utils.WriteJSON(w, http.StatusOK, types.ItemsResponse{Items: []types.Item{}})
 		return
 	} else {
 		response := types.ItemsResponse{
@@ -362,6 +365,11 @@ func (h *Handler) handleItemSoldBulk (w http.ResponseWriter, r *http.Request) {
 	if err := utils.Validate.Struct(payload); err != nil {
 		errors := err.(validator.ValidationErrors)
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
+		return
+	}
+
+	if payload.ItemTags == nil || len(payload.ItemTags) == 0 {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("no tags found"))
 		return
 	}
 
@@ -605,4 +613,60 @@ func (h *Handler) handleGetInvoices (w http.ResponseWriter, r *http.Request) {
 	} else {
 		utils.WriteJSON(w, http.StatusOK, invoices)
 	}
+}
+
+func (h *Handler) handleGetAllInvoice (w http.ResponseWriter, r *http.Request) {
+	pageStr := r.URL.Query().Get("page")
+	invoice := r.URL.Query().Get("invoice")
+	status := r.URL.Query().Get("status")
+	limit := 10
+
+	page, err := strconv.Atoi(pageStr)
+    if err != nil {
+        limit = 10
+    }
+
+	offset := (page - 1) * limit
+
+	invoices, count, err := h.store.GetAllInvoice(limit, offset, invoice, status)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error: %v", err))
+		return
+	}
+
+	if len(invoices) == 0 {
+		utils.WriteJSON(w, http.StatusOK, types.InvoicesResponse{Invoices: []types.Invoice{}})
+		return
+	} else {
+		response := types.InvoicesResponse{
+			Invoices: invoices,
+			Count: count,
+		}
+	
+		utils.WriteJSON(w, http.StatusOK, response)
+	}
+}
+
+func (h *Handler) handleGetItemStatusCount (w http.ResponseWriter, r *http.Request) {
+	not_sold, sold_pending, sold_shipped, err := h.store.GetItemStatusCount()
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error: %v", err));
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, types.ItemStatusCount{
+		NotSold: not_sold,
+		SoldPending: sold_pending,
+		SoldShipped: sold_shipped,
+	})
+}
+
+func (h *Handler) handleGetItemTypeCount (w http.ResponseWriter, r *http.Request) {
+	counts, err := h.store.GetItemTypeCount()
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("error: %v", err));
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, counts)
 }

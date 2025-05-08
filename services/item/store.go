@@ -3,8 +3,10 @@ package item
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"strings"
+
 	"github.com/PatrickA727/mikrotik-db-sys/types"
 	_ "github.com/jackc/pgx/v5"
 )
@@ -145,7 +147,7 @@ func (s *Store) GetItems(limit int, offset int, search string) ([]types.Item ,in
 
 	if search != "" {
 
-		searchPattern := "%" + search + "%"
+		searchPattern := search + "%"
 
 		rows, err = s.db.QueryContext(context.Background(), 
 			"SELECT id, serial_number, rfid_tag, item_name, warranty, sold, modal, keuntungan, quantity, batch, status, type_ref, createdat FROM items WHERE serial_number ILIKE $1 OR rfid_tag ILIKE $1 OR item_name ILIKE $1 ORDER BY batch DESC LIMIT $2 OFFSET $3", searchPattern, limit, offset,
@@ -556,4 +558,139 @@ func (s *Store) ShipInvoice (invoice_id int, tx *sql.Tx, ctx context.Context) er
 	}
 
 	return nil
+}
+
+func (s *Store) GetAllInvoice (limit int, offset int, invoice string, status string) ([]types.Invoice, int, error) {
+	var (
+		rows *sql.Rows
+		err error
+   )
+
+   var invoices []types.Invoice
+   var args []interface{}
+   var conditions []string
+
+   query := "SELECT id, invoice_str, status, online_shop FROM invoice"
+
+	if invoice != "" {
+		args = append(args, invoice+"%")
+
+		conditions = append(conditions, fmt.Sprintf("invoice_str ILIKE $%d", len(args)))
+	}
+
+	if status != "" {
+		args = append(args, status+"%")
+
+		conditions = append(conditions, fmt.Sprintf("status ILIKE $%d", len(args)))
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	args = append(args, limit, offset)
+	query += fmt.Sprintf(" ORDER BY id DESC LIMIT $%d OFFSET $%d", len(args)-1, len(args))
+
+	rows, err = s.db.Query(query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var invoice types.Invoice
+
+		if err := rows.Scan(&invoice.ID, &invoice.InvoiceStr, &invoice.Status, &invoice.OnlineShop); err != nil {
+			return nil, 0, err
+		}
+
+		invoices = append(invoices, invoice)
+	}
+
+	if err = rows.Err(); err != nil {
+        return nil, 0, err
+    }
+
+	count, err := s.GetInvoiceCount(invoice, status)
+	if err != nil {
+		return nil, 0, err
+	}
+
+    return invoices, count, nil
+}
+
+func (s *Store) GetInvoiceCount (invoice string, status string) (int, error) {
+	invoiceCount := 0
+
+	var args []interface{}
+   	var conditions []string
+
+	query := "SELECT COUNT(*) FROM invoice"
+
+	if invoice != "" {
+		args = append(args, invoice+"%")
+
+		conditions = append(conditions, fmt.Sprintf("invoice_str ILIKE $%d", len(args)))
+	}
+
+	if status != "" {
+		args = append(args, status+"%")
+
+		conditions = append(conditions, fmt.Sprintf("status ILIKE $%d", len(args)))
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	err := s.db.QueryRow(query, args...).Scan(&invoiceCount)
+	if err != nil {
+		return 0, err
+	}
+
+	return invoiceCount, nil
+}
+
+func (s *Store) GetItemStatusCount() (int, int, int, error) {
+	var notSoldCount, soldPendingCount, soldShippedCount int
+
+	err := s.db.QueryRow(`
+		SELECT
+			COUNT(CASE WHEN status = 'not sold' THEN 1 END),
+			COUNT(CASE WHEN status = 'sold-pending' THEN 1 END),
+			COUNT(CASE WHEN status = 'sold-shipped' THEN 1 END)
+		FROM items
+	`).Scan(&notSoldCount, &soldPendingCount, &soldShippedCount)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	return notSoldCount, soldPendingCount, soldShippedCount, nil
+}
+
+func (s *Store) GetItemTypeCount() (map[string]int, error) {
+	counts := make(map[string]int)
+
+	rows, err := s.db.Query("SELECT type_ref, COUNT(*) FROM items GROUP BY type_ref")
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var i_type string
+		var t_count int
+
+		if err := rows.Scan(&i_type, &t_count); err != nil {
+			return nil, err
+		}
+		counts[i_type] = t_count
+	}
+	if err := rows.Err(); err != nil {
+        return nil, err
+    }
+
+	return counts, nil
 }
