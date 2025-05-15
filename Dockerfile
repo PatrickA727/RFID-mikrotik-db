@@ -12,7 +12,7 @@
     COPY . .
     
     # Build the Go app (output binary named 'app')
-    RUN go build -o app .
+    RUN go build -o app ./cmd
     
     # Uses distroless(lightweight) debian as the os for the image
     FROM gcr.io/distroless/base-debian12 AS runner

@@ -1,0 +1,5 @@
+.git
+tmp
+.gitignore
+Makefile
+frontend
