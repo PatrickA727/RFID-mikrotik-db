@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/PatrickA727/mikrotik-db-sys/types"
@@ -30,8 +29,8 @@ func (s *Store) BeginTransaction(ctx context.Context) (*sql.Tx, error) {
 }
 
 func (s *Store) CreateItem(item types.Item) error {
-	_, err := s.db.Exec("INSERT INTO items (serial_number, rfid_tag, item_name, quantity, batch, type_ref) VALUES ($1, $2, $3, $4, $5, $6)", 
-						item.SerialNumber, item.RFIDTag, item.ItemName, item.Quantity, item.Batch, item.TypeRef,
+	_, err := s.db.Exec("INSERT INTO items (serial_number, rfid_tag, batch, type_ref) VALUES ($1, $2, $3, $4)", 
+						item.SerialNumber, item.RFIDTag, item.Batch, item.TypeRef,
 					);
 	if err != nil {
 		return err
@@ -79,8 +78,21 @@ func (s *Store) GetItemTypes() ([]types.ItemType, error) {
 func (s *Store) GetItemByRFIDTag(rfid_tag string) (*types.Item, error) {
 	var item types.Item
 
-	err := s.db.QueryRow("SELECT id, serial_number, rfid_tag, item_name, sold, modal, keuntungan, quantity, batch, type_ref FROM items WHERE rfid_tag = $1", rfid_tag).Scan(
-		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, &item.Sold, &item.Modal, &item.Keuntungan, &item.Quantity, &item.Batch, &item.TypeRef,
+	err := s.db.QueryRow("SELECT id, serial_number, rfid_tag, batch, type_ref FROM items WHERE rfid_tag = $1", rfid_tag).Scan(
+		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.Batch, &item.TypeRef,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+func (s *Store) GetItemBySN(serial_num string, tx *sql.Tx, ctx context.Context) (*types.Item, error) {
+	var item types.Item
+
+	err := tx.QueryRowContext(ctx, "SELECT id, serial_number, rfid_tag, batch, type_ref FROM items WHERE serial_number = $1", serial_num).Scan(
+		&item.ID, &item.SerialNumber, &item.RFIDTag, &item.Batch, &item.TypeRef,
 	)
 	if err != nil {
 		return nil, err
@@ -134,32 +146,45 @@ func (s *Store) GetItemByIdSearch(search string) ([]types.ItemSellingResponse, e
 }
 
 
-func (s *Store) GetItems(limit int, offset int, search string) ([]types.Item ,int, error) {
+func (s *Store) GetItems(limit int, offset int, search string, status string) ([]types.Item ,int, error) {
 	var (
 		 rows *sql.Rows
 		 err error
 	)
 
-	itemCount, err := s.GetItemCount(search)
+	var args []interface{}
+   	var conditions []string
+
+	query := `SELECT id, serial_number, rfid_tag, batch, status, type_ref, 
+			  createdat FROM items`
+
+	if search != "" {
+		args = append(args, search+"%")
+
+		conditions = append(conditions, fmt.Sprintf("(serial_number ILIKE $%d OR rfid_tag ILIKE $%d)", len(args), len(args)))
+	}
+
+	if status != "" {
+		args = append(args, status)
+
+		conditions = append(conditions, fmt.Sprintf("status = $%d", len(args)))
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	args = append(args, limit, offset)
+	query += fmt.Sprintf(" ORDER BY batch DESC, id DESC LIMIT $%d OFFSET $%d", len(args)-1, len(args))
+
+	rows, err = s.db.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	if search != "" {
-
-		searchPattern := search + "%"
-
-		rows, err = s.db.QueryContext(context.Background(), 
-			"SELECT id, serial_number, rfid_tag, item_name, warranty, sold, modal, keuntungan, quantity, batch, status, type_ref, createdat FROM items WHERE serial_number ILIKE $1 OR rfid_tag ILIKE $1 OR item_name ILIKE $1 ORDER BY batch DESC LIMIT $2 OFFSET $3", searchPattern, limit, offset,
-		)
-		if err != nil {
-			return nil, 0, err
-		}
-	} else {
-		rows, err = s.db.QueryContext(context.Background(), "SELECT id, serial_number, rfid_tag, item_name, warranty, sold, modal, keuntungan, quantity, batch, status, type_ref, createdat FROM items ORDER BY batch DESC LIMIT $1 OFFSET $2", limit, offset)
-		if err != nil {
-			return nil, 0, err
-		}
+	itemCount, err := s.GetItemCount(search, status)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	defer rows.Close()	// Close rows database connection after finish processing the data/function
@@ -169,7 +194,7 @@ func (s *Store) GetItems(limit int, offset int, search string) ([]types.Item ,in
 	for rows.Next() {
 		var item types.Item
 
-		if err := rows.Scan(&item.ID, &item.SerialNumber, &item.RFIDTag, &item.ItemName, &item.Warranty, &item.Sold, &item.Modal, &item.Keuntungan, &item.Quantity, &item.Batch, &item.Status, &item.TypeRef, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.SerialNumber, &item.RFIDTag, &item.Batch, &item.Status, &item.TypeRef, &item.CreatedAt); err != nil {
 			return nil, 0, err
 		}
 
@@ -183,24 +208,33 @@ func (s *Store) GetItems(limit int, offset int, search string) ([]types.Item ,in
     return items, itemCount, nil
 }
 
-func (s *Store) GetItemCount(search string) (int, error) {
+func (s *Store) GetItemCount(search string, status string) (int, error) {
 	itemCount := 0
-	if (search == "") {
-		err := s.db.QueryRowContext(context.Background(), 
-		"SELECT COUNT(*) FROM items", 
-	).Scan(&itemCount)
-		if err != nil {
-			return 0, err
-		}
-	} else {
-		searchPattern := "%" + search + "%"
 
-		err := s.db.QueryRowContext(context.Background(), 
-		"SELECT COUNT(*) FROM items WHERE serial_number ILIKE $1 OR rfid_tag ILIKE $1 OR item_name ILIKE $1", searchPattern, 
-	).Scan(&itemCount)
-		if err != nil {
-			return 0, err
-		}
+	var args []interface{}
+   	var conditions []string
+
+	query := `SELECT COUNT(*) FROM items`
+
+	if search != "" {
+		args = append(args, search+"%")
+
+		conditions = append(conditions, fmt.Sprintf("(serial_number ILIKE $%d OR rfid_tag ILIKE $%d)", len(args), len(args)))
+	}
+
+	if status != "" {
+		args = append(args, status+"%")
+
+		conditions = append(conditions, fmt.Sprintf("status ILIKE $%d", len(args)))
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	err := s.db.QueryRow(query, args...).Scan(&itemCount)
+	if err != nil {
+		return 0, err
 	}
 
 	return itemCount, nil
@@ -213,140 +247,6 @@ func (s *Store) DeleteItemByRFID(rfid_tag string) error {
 	}
 
 	return nil
-}
-
-func (s *Store) CreateWarranty(warranty types.Warranty, ctx context.Context) error {
-	tx, err := s.BeginTransaction(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Ensure transaction rollback on failure
-	defer func() {	// Defer function runs when outer function finishes
-		if err != nil {
-			if rbErr := tx.Rollback(); rbErr != nil {
-				log.Printf("failed to rollback transaction: %v", rbErr)
-			}
-			return
-		}
-		if commitErr := tx.Commit(); commitErr != nil {
-			log.Printf("failed to commit transaction: %v", commitErr)
-		}
-	}()
-
-	_, err = tx.ExecContext(ctx,
-		"INSERT INTO warranty (item_id, purchase_date, expiration, cust_name, cust_email, cust_phone) VALUES ($1, $2, $3, $4, $5, $6)",
-			warranty.ItemID, warranty.PurchaseDate, warranty.Expiration, warranty.CustName, warranty.CustEmail, warranty.CustPhone,
-		)
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.ExecContext(ctx, "UPDATE items SET warranty = $1 WHERE id = $2", "active", warranty.ItemID)
-	if err != nil {
-		return err
-	} 
-
-	return nil
-}
-
-func (s *Store) GetWarrantyByItemId(item_id int) (*types.Warranty, error) {
-	var warranty types.Warranty
-
-	err := s.db.QueryRow("SELECT id, item_id, purchase_date, expiration, cust_name, cust_email, cust_phone FROM warranty WHERE item_id = $1", item_id,
-			).Scan(&warranty.ID, &warranty.ItemID, &warranty.PurchaseDate, &warranty.Expiration, &warranty.CustName, &warranty.CustEmail, &warranty.CustPhone)
-	if err != nil {
-		return nil, err
-	}
-
-	return &warranty, nil
-}
-
-func (s *Store) GetAllWarranty(limit int, offset int, search string) ([]types.Warranty, int, error) {
-	var (
-		 rows *sql.Rows
-		 err error
-	)
-
-	warrantyCount, err := s.GetWarrantyCount(search)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if search != "" {
-
-		searchPattern := "%" + search + "%"
-
-		rows, err = s.db.QueryContext(context.Background(), 
-			`SELECT w.id, w.item_id, w.purchase_date, w.expiration, w.cust_name, w.cust_email, w.cust_phone, i.serial_number 
-				FROM warranty w 
-				JOIN items i ON w.item_id = i.id 
-				WHERE w.cust_name ILIKE $1 
-				OR w.cust_email ILIKE $1 
-				OR w.purchase_date::text ILIKE $1 
-				OR w.expiration::text ILIKE $1 
-				OR i.serial_number ILIKE $1 
-				ORDER BY w.id ASC 
-			 LIMIT $2 OFFSET $3`, searchPattern, limit, offset,
-		)
-		if err != nil {
-			return nil, 0, err
-		}
-	} else {
-		rows, err = s.db.QueryContext(context.Background(), 
-		   "SELECT w.id, w.item_id, w.purchase_date, w.expiration, w.cust_name, w.cust_email, w.cust_phone, i.serial_number FROM warranty w JOIN items i ON w.item_id = i.id  ORDER BY id ASC LIMIT $1 OFFSET $2", limit, offset)
-		if err != nil {
-			return nil, 0, err
-		}
-	}
-
-	defer rows.Close()
-	var warranties []types.Warranty
-
-	for rows.Next() {
-		var warranty types.Warranty
-
-		if err := rows.Scan(&warranty.ID, &warranty.ItemID, &warranty.PurchaseDate, &warranty.Expiration, &warranty.CustName, &warranty.CustEmail, &warranty.CustPhone, &warranty.ItemSN); err != nil {
-			return nil, 0, err
-		}
-
-		warranties = append(warranties, warranty)
-	}
-
-	if err = rows.Err(); err != nil {
-        return nil, 0, err
-    }
-
-	return warranties, warrantyCount, nil
-}
-
-func (s *Store) GetWarrantyCount(search string) (int, error) {
-	warrantyCount := 0
-	if (search == "") {
-		err := s.db.QueryRowContext(context.Background(), 
-		"SELECT COUNT(*) FROM warranty", 
-	).Scan(&warrantyCount)
-		if err != nil {
-			return 0, err
-		}
-	} else {
-		searchPattern := "%" + search + "%"
-
-		err := s.db.QueryRowContext(context.Background(), 
-		`SELECT COUNT(*) FROM warranty w 
-				JOIN items i ON w.item_id = i.id 
-				WHERE w.cust_name ILIKE $1 
-				OR w.cust_email ILIKE $1 
-				OR w.purchase_date::text ILIKE $1 
-				OR w.expiration::text ILIKE $1 
-				OR i.serial_number ILIKE $1`, searchPattern, 
-	).Scan(&warrantyCount)
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	return warrantyCount, nil
 }
 
 func (s *Store) CreateInvoice(invoice string, ol_shop string, tx *sql.Tx, ctx context.Context) (int, error) {
@@ -366,20 +266,20 @@ func (s *Store) CreateInvoice(invoice string, ol_shop string, tx *sql.Tx, ctx co
 	return invoice_id, nil
 }
 
-func (s *Store) NewItemSold(sold_item types.SoldItem, quantity int, tx *sql.Tx, ctx context.Context) error {
+func (s *Store) NewItemSold(sold_item types.SoldItem, tx *sql.Tx, ctx context.Context) error {
 	var (
 		err error
 	)
 
 	_, err = tx.ExecContext(ctx,
-		"INSERT INTO sold_items (item_id, invoice, ol_shop, invoice_id) VALUES ($1, $2, $3, $4)",
-			sold_item.ItemID, sold_item.Invoice, sold_item.OnlineShop, sold_item.InvoiceID,
+		"INSERT INTO sold_items (item_id, ol_shop, invoice_id) VALUES ($1, $2, $3)",
+			sold_item.ItemID, sold_item.OnlineShop, sold_item.InvoiceID,
 		)
 	if err != nil {
 		return err
 	}
 
-	_, err = tx.ExecContext(ctx, "UPDATE items SET status = $1, quantity = $2 WHERE id = $3", "sold-pending", quantity-1, sold_item.ItemID)
+	_, err = tx.ExecContext(ctx, "UPDATE items SET status = $1 WHERE id = $2", "sold-pending", sold_item.ItemID)
 	if err != nil {
 		return err
 	} 
@@ -387,14 +287,14 @@ func (s *Store) NewItemSold(sold_item types.SoldItem, quantity int, tx *sql.Tx, 
 	return nil
 }
 
-func (s *Store) UpdateItemSold(updated_solditem types.SoldItem) error {
-	_, err := s.db.Exec("UPDATE sold_items SET payment_status = $1, journal = $2 WHERE id = $3", updated_solditem.PaymentStatus, updated_solditem.Journal, updated_solditem.ID)
-	if err != nil {
-		return err
-	}
+// func (s *Store) UpdateItemSold(updated_solditem types.SoldItem) error {
+// 	_, err := s.db.Exec("UPDATE sold_items SET payment_status = $1, journal = $2 WHERE id = $3", updated_solditem.ID)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.SoldItem, int, error) {
 	var (
@@ -411,11 +311,10 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 	   searchPattern := "%" + search + "%"
 
 	   rows, err = s.db.QueryContext(context.Background(), 
-		   `SELECT s.id, s.item_id, s.datetime_sold, s.invoice, s.ol_shop, s.payment_status, s.journal, i.serial_number, i.status
+		   `SELECT s.id, s.item_id, s.datetime_sold, s.ol_shop, i.serial_number, i.status
 			   FROM sold_items s 
 			   JOIN items i ON s.item_id = i.id 
 			   WHERE s.datetime_sold::text ILIKE $1 
-			   OR s.invoice ILIKE $1 
 			   OR s.ol_shop ILIKE $1
 			   OR i.serial_number ILIKE $1 
 			   ORDER BY s.id DESC 
@@ -426,7 +325,7 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 	   }
    } else {
 	   rows, err = s.db.QueryContext(context.Background(), 
-	      `SELECT s.id, s.item_id, s.datetime_sold, s.invoice, s.ol_shop, s.payment_status, s.journal, i.serial_number, i.status 
+	      `SELECT s.id, s.item_id, s.datetime_sold, s.ol_shop, i.serial_number, i.status 
 		  FROM sold_items s JOIN items i ON s.item_id = i.id 
 		  ORDER BY id DESC LIMIT $1 OFFSET $2`, limit, offset)
 	   if err != nil {
@@ -440,7 +339,7 @@ func (s *Store) GetAllSoldItems(limit int, offset int, search string) ([]types.S
 	for rows.Next() {
 		var soldItem types.SoldItem
 
-		if err := rows.Scan(&soldItem.ID, &soldItem.ItemID, &soldItem.DatetimeSold, &soldItem.Invoice, &soldItem.OnlineShop, &soldItem.PaymentStatus, &soldItem.Journal, &soldItem.ItemSN, &soldItem.Status); err != nil {
+		if err := rows.Scan(&soldItem.ID, &soldItem.ItemID, &soldItem.DatetimeSold, &soldItem.OnlineShop, &soldItem.ItemSN, &soldItem.Status); err != nil {
 			return nil, 0, err
 		}
 
@@ -471,7 +370,6 @@ func (s *Store) GetSoldItemsCount (search string) (int, error) {
 		`SELECT COUNT(*) FROM sold_items s 
 			   JOIN items i ON s.item_id = i.id 
 			   WHERE s.datetime_sold::text ILIKE $1 
-			   OR s.invoice ILIKE $1 
 			   OR i.serial_number ILIKE $1`, searchPattern, 
 	).Scan(&soldItemsCount)
 		if err != nil {
@@ -551,6 +449,20 @@ func (s *Store) GetInvoices (invoice string) ([]types.Invoice, error) {
 	return invoices, nil
 }
 
+func (s *Store) GetInvoiceByID(id int) (*types.Invoice, error) {
+	var invoice types.Invoice
+
+	err := s.db.QueryRow("SELECT invoice_str, status, online_shop FROM invoice WHERE id = $1", id).Scan(
+		&invoice.InvoiceStr, &invoice.Status, &invoice.OnlineShop,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &invoice, nil
+}
+
 func (s *Store) ShipInvoice (invoice_id int, tx *sql.Tx, ctx context.Context) error {
 	_, err := tx.ExecContext(ctx, `UPDATE invoice SET status = $1 WHERE id = $2`, "shipped", invoice_id)
 	if err != nil {
@@ -579,7 +491,7 @@ func (s *Store) GetAllInvoice (limit int, offset int, invoice string, status str
 	}
 
 	if status != "" {
-		args = append(args, status+"%")
+		args = append(args, status)
 
 		conditions = append(conditions, fmt.Sprintf("status ILIKE $%d", len(args)))
 	}
@@ -635,7 +547,7 @@ func (s *Store) GetInvoiceCount (invoice string, status string) (int, error) {
 	}
 
 	if status != "" {
-		args = append(args, status+"%")
+		args = append(args, status)
 
 		conditions = append(conditions, fmt.Sprintf("status ILIKE $%d", len(args)))
 	}
@@ -650,6 +562,60 @@ func (s *Store) GetInvoiceCount (invoice string, status string) (int, error) {
 	}
 
 	return invoiceCount, nil
+}
+
+func (s *Store) EditInvoice(id int, payload types.EditInvoice) error {
+	var setClauses []string
+	var args []interface{}
+
+	argIndex := 1
+
+	if payload.Invoice != "" {
+		setClauses = append(setClauses, fmt.Sprintf("invoice_str = $%d", argIndex))
+		args = append(args, payload.Invoice)
+		argIndex++
+	}
+
+	if payload.OnlineShop != "" {
+		setClauses = append(setClauses, fmt.Sprintf("online_shop = $%d", argIndex))
+		args = append(args, payload.OnlineShop)
+		argIndex++
+	}
+
+	// No fields to update
+	if len(setClauses) == 0 {
+		return fmt.Errorf("no fields to update")
+	}
+
+	// Build final query
+	query := fmt.Sprintf("UPDATE invoice SET %s WHERE id = $%d",
+		strings.Join(setClauses, ", "), argIndex)
+
+	args = append(args, id)
+
+	// Execute query
+	_, err := s.db.Exec(query, args...)
+	return err
+}
+
+func (s *Store) DeleteInvoice(id int, tx *sql.Tx, ctx context.Context) error {
+	_, err := tx.ExecContext(ctx, `DELETE FROM invoice WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Store) ResetItemsToNotSold(items []types.SoldItem, tx *sql.Tx, ctx context.Context) error {
+	for _, item := range items {
+		_, err := tx.ExecContext(ctx, `UPDATE items SET status = 'not sold' WHERE id = $1`, item.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *Store) GetItemStatusCount() (int, int, int, error) {

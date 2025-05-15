@@ -17,7 +17,7 @@ const AuthRoute = ({ children }) => {
     useEffect(() => { 
         const validateToken = async () => {
           try {
-            const response = await api.get('/api/user/auth-client', {
+            const response = await api.get('/api/user/auth-client-mk', {
               withCredentials: true // Important for sending cookies
             });
     

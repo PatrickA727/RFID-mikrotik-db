@@ -22,7 +22,6 @@ type User struct {
 	Username	string		`json:"username"`
 	Email		string		`json:"email"`
 	Password	string		`json:"-"`	// - is to ignore this field for the response(obvious reasons)
-	Role		string		`json:"role"`
 }
 
 type UserPayload struct {

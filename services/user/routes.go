@@ -79,7 +79,6 @@ func (h *Handler) handleRenewToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleRegisterUser(w http.ResponseWriter, r *http.Request) {
-	var DefaultRole = "user"
 	// Get JSON
 	var payload types.UserPayload
 	if err := utils.ParseJSON(r, &payload); err != nil {
@@ -113,7 +112,6 @@ func (h *Handler) handleRegisterUser(w http.ResponseWriter, r *http.Request) {
 			Username: payload.Username,
 			Email: payload.Email,
 			Password: hashedPass,
-			Role: DefaultRole,
 		},
 	); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error registering user: %v", err))
@@ -214,7 +212,7 @@ func (h *Handler) handleLoginUser(w http.ResponseWriter, r *http.Request) {
 	accessCookie := &http.Cookie{
 		Name:     "access_token",                
 		Value:    token,                      
-		Expires:  time.Now().Add(time.Duration(10) * time.Second), 
+		Expires:  time.Now().Add(time.Duration(900) * time.Second), 
 		HttpOnly: true,	// SET TO TRUE FOR DEPLOY       
 		Path: "/",        
 		Secure:   true,                       

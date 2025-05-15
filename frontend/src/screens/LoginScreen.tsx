@@ -17,7 +17,7 @@ const LoginScreen = () => {
   useEffect(() => { 
     const validateToken = async () => {
         try {
-            const response = await axios.get('/api/user/auth-client', {
+            const response = await axios.get('/api/user/auth-client-mk', {
                 withCredentials: true // Important for sending cookies
             });
             if (response.status < 300 || response.status > 199) {

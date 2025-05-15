@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/PatrickA727/mikrotik-db-sys/services/auth"
 	"github.com/PatrickA727/mikrotik-db-sys/types"
@@ -29,15 +28,13 @@ func NewHandler (store types.ItemStore, userStore types.UserStore) *Handler {
 func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/register-item", auth.MobileAuth(h.handleRegisterItem, h.userStore)).Methods("POST")	// Mobile App
 	router.HandleFunc("/delete/{rfid_tag}", auth.WithJWTAuth(h.handleDeleteItem, h.userStore)).Methods("DELETE")
-	router.HandleFunc("/register-warranty/{rfid_tag}", h.handleActivateNewWarranty).Methods("POST")
 	// router.HandleFunc("/item-sold/{rfid_tag}", auth.WithJWTAuth(h.handleItemSold, h.userStore)).Methods("POST")	// Unused
 	router.HandleFunc("/get-items", auth.WithJWTAuth(h.handleGetItems, h.userStore)).Methods("GET")
 	router.HandleFunc("/get-types", auth.MobileAuth(h.handleGetItemTypes, h.userStore)).Methods("GET")	// Mobile App
-	router.HandleFunc("/get-warranties", auth.WithJWTAuth(h.handleGetAllWarranties, h.userStore)).Methods("GET")
 	router.HandleFunc("/get-sold-items", auth.WithJWTAuth(h.handleGetAllSoldItem, h.userStore)).Methods("GET")
 	router.HandleFunc("/item-sold-bulk", auth.WithJWTAuth(h.handleItemSoldBulk, h.userStore)).Methods("POST")
 	router.HandleFunc("/ship-items/{invoice_id}", auth.MobileAuth(h.handleShipItems, h.userStore)).Methods("PATCH")	// Mobile App
-	router.HandleFunc("/edit-item-sold", auth.WithJWTAuth(h.handleUpdateSoldItem, h.userStore)).Methods("PATCH")
+	// router.HandleFunc("/edit-item-sold", auth.WithJWTAuth(h.handleUpdateSoldItem, h.userStore)).Methods("PATCH")
 	router.HandleFunc("/get-item-rfid/{rfid_tag}", auth.WithJWTAuth(h.handleGetItemByRFID, h.userStore)).Methods("GET")	// Unused
 	router.HandleFunc("/get-sold-by-rfid/{rfid_tag}", auth.MobileAuth(h.handleGetSoldItem, h.userStore)).Methods("GET")	// Mobile App
 	router.HandleFunc("/register-item-type", auth.WithJWTAuth(h.handleCreateItemType, h.userStore)).Methods("POST")
@@ -45,6 +42,8 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/get-invoice-items/{id}", auth.MobileAuth(h.handleGetItemsByInvoice, h.userStore)).Methods("GET") // Mobile App
 	router.HandleFunc("/get-invoices", auth.MobileAuth(h.handleGetInvoices, h.userStore)).Methods("GET") // Mobile App
 	router.HandleFunc("/get-all-invoices", auth.WithJWTAuth(h.handleGetAllInvoice, h.userStore)).Methods("GET")
+	router.HandleFunc("/edit-invoice/{id}", auth.WithJWTAuth(h.handleEditInvoice, h.userStore)).Methods("PATCH")
+	router.HandleFunc("/delete-invoice/{id}", auth.WithJWTAuth(h.handleDeleteInvoice, h.userStore)).Methods("DELETE")
 	router.HandleFunc("/get-status-count", auth.WithJWTAuth(h.handleGetItemStatusCount, h.userStore)).Methods("GET")
 	router.HandleFunc("/get-type-count", auth.WithJWTAuth(h.handleGetItemTypeCount, h.userStore)).Methods("GET")
 }
@@ -69,8 +68,6 @@ func (h *Handler) handleRegisterItem(w http.ResponseWriter, r *http.Request) {
 	err = h.store.CreateItem(types.Item{
 		SerialNumber: payload.SerialNumber,
 		RFIDTag: payload.RFIDTag,
-		ItemName: payload.ItemName,
-		Quantity: payload.Quantity,
 		Batch: payload.Batch,
 		TypeRef: payload.TypeRef,
 	})
@@ -90,6 +87,13 @@ func (h *Handler) handleDeleteItem(w http.ResponseWriter, r *http.Request) {
 	// Get serial number from path parameter
 	vars := mux.Vars(r)
 	rfid_tag := vars["rfid_tag"]
+
+
+	_, err = h.store.GetItemByRFIDTag(rfid_tag)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("item doesnt exist"))
+		return
+	}
 
 	// Delete item
 	err = h.store.DeleteItemByRFID(rfid_tag)
@@ -132,6 +136,7 @@ func (h *Handler) handleGetItems(w http.ResponseWriter, r *http.Request) {
 	limitStr := r.URL.Query().Get("limit")
     offsetStr := r.URL.Query().Get("offset")
 	searchQuery := r.URL.Query().Get("search")
+	statusQuery := r.URL.Query().Get("status")
 
 	// Convert limit and offset to int
     limit, err := strconv.Atoi(limitStr)
@@ -145,7 +150,7 @@ func (h *Handler) handleGetItems(w http.ResponseWriter, r *http.Request) {
     }
 
 	// Get items
-	items, itemCount, err := h.store.GetItems(limit, offset, searchQuery)
+	items, itemCount, err := h.store.GetItems(limit, offset, searchQuery, statusQuery)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error retrieving all items: %v", err))
 		return
@@ -186,107 +191,6 @@ func (h *Handler) handleGetAvailItemBySN(w http.ResponseWriter, r *http.Request)
 		})
 	}
 
-}
-
-func (h *Handler) handleActivateNewWarranty(w http.ResponseWriter, r *http.Request) {
-	// Get RFID tags from path params
-	vars := mux.Vars(r)
-	rfid_tag := vars["rfid_tag"]
-
-	// Context for transaction in 'CreateWarranty'
-	ctx := r.Context()
-
-	// Parse form data
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
-	}
-
-	// Store payload to struct
-	var payload = types.NewWarrantyPayload{
-		PurchaseDate: r.FormValue("purchase_date"),
-		CustName:     r.FormValue("cust_name"),
-		CustEmail:    r.FormValue("cust_email"),
-		CustPhone:    r.FormValue("cust_phone"),
-	}
-
-	// Validating payload
-	if err := utils.Validate.Struct(payload); err != nil {
-		errors := err.(validator.ValidationErrors)
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
-		return
-	}
-
-	// Parse form date from string to datetime 
-	purchaseDate, err := time.Parse("2006-01-02", r.FormValue("purchase_date"))
-	if err != nil {
-		http.Error(w, "Invalid purchase date format", http.StatusBadRequest)
-		return
-	}
-
-	// Generate expiration date
-	expirationDate := purchaseDate.AddDate(1, 0, 0)
-
-	// Get item ID
-	i, err := h.store.GetItemByRFIDTag(rfid_tag)
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error getting item: %v", err))
-		return
-	}
-
-	err = h.store.CreateWarranty(
-		types.Warranty{
-			ItemID: i.ID,
-			PurchaseDate: purchaseDate,
-			Expiration: expirationDate,
-			CustName: payload.CustName,
-			CustEmail: payload.CustEmail,
-			CustPhone: payload.CustPhone,
-		}, ctx,
-	)
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error creating warranty: %v", err))
-		return
-	}
-
-	utils.WriteJSON(w, http.StatusCreated, "warranty created")
-}
-
-func (h *Handler) handleGetAllWarranties(w http.ResponseWriter, r *http.Request) {
-	// Get limit, offset and search query parameters
-	limitStr := r.URL.Query().Get("limit")
-    offsetStr := r.URL.Query().Get("offset")
-	searchQuery := r.URL.Query().Get("search")
-
-	// Convert limit and offset to int
-    limit, err := strconv.Atoi(limitStr)
-    if err != nil || limit <= 0 {
-        limit = 10
-    }
-
-	offset, err := strconv.Atoi(offsetStr)
-    if err != nil || offset < 0 {
-        offset = 0
-    }
-
-	// Get warranties
-	warranties, warrantyCount, err := h.store.GetAllWarranty(limit, offset, searchQuery)
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error getting warranties: %v", err))
-		return
-	}
-
-	if len(warranties) == 0 {
-		utils.WriteJSON(w, http.StatusOK, []types.Warranty{})
-		return
-	}
-
-	response := types.WarrantyResponse {
-		Warranties: warranties,
-		WarrantyCount: warrantyCount,
-	}
-
-	utils.WriteJSON(w, http.StatusOK, response)
 }
 
 // func (h *Handler) handleItemSold(w http.ResponseWriter, r *http.Request) {
@@ -332,6 +236,11 @@ func (h *Handler) handleGetAllWarranties(w http.ResponseWriter, r *http.Request)
 // }
 
 func (h *Handler) handleItemSoldBulk (w http.ResponseWriter, r *http.Request) {
+	var (
+		i *types.Item
+		err  error
+	)
+
 	// Transaction
 	ctx := r.Context()
 	tx, err := h.store.BeginTransaction(ctx)
@@ -356,19 +265,19 @@ func (h *Handler) handleItemSoldBulk (w http.ResponseWriter, r *http.Request) {
 
 	// Get JSON payload
 	var payload types.SoldItemBulkPayload
-	if err := utils.ParseJSON(r, &payload); err != nil {
+	if err = utils.ParseJSON(r, &payload); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("parsing error: %v", err))
 		return
 	}
 
 	// Validate JSON
-	if err := utils.Validate.Struct(payload); err != nil {
+	if err = utils.Validate.Struct(payload); err != nil {
 		errors := err.(validator.ValidationErrors)
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
 		return
 	}
 
-	if payload.ItemTags == nil || len(payload.ItemTags) == 0 {
+	if payload.SerialNums == nil || len(payload.SerialNums) == 0 {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("no tags found"))
 		return
 	}
@@ -381,8 +290,8 @@ func (h *Handler) handleItemSoldBulk (w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get and register items
-	for _, itemTag := range payload.ItemTags {
-		i, err := h.store.GetItemByRFIDTag(itemTag)
+	for _, SerialNum := range payload.SerialNums {
+		i, err = h.store.GetItemBySN(SerialNum, tx, ctx)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error getting items: %v", err))
 			return
@@ -390,10 +299,9 @@ func (h *Handler) handleItemSoldBulk (w http.ResponseWriter, r *http.Request) {
 
 		err = h.store.NewItemSold(types.SoldItem{
 			ItemID: i.ID,
-			Invoice: payload.Invoice,
 			InvoiceID: invoice_id,
 			OnlineShop: payload.OnlineShop,
-		}, i.Quantity, tx, ctx)
+		},  tx, ctx)
 		if err != nil {
 			utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error bulk registering sold items: %v", err))
 			return
@@ -463,35 +371,33 @@ func (h *Handler) handleShipItems(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, "Item Shipped")
 }
 
-func (h *Handler) handleUpdateSoldItem (w http.ResponseWriter, r *http.Request) {
-	// Get JSON payload
-	var payload types.SoldItem
-	err := utils.ParseJSON(r, &payload) 
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error parsing JSON: %v", err))
-		return
-	}
+// func (h *Handler) handleUpdateSoldItem (w http.ResponseWriter, r *http.Request) {
+// 	// Get JSON payload
+// 	var payload types.SoldItem
+// 	err := utils.ParseJSON(r, &payload) 
+// 	if err != nil {
+// 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error parsing JSON: %v", err))
+// 		return
+// 	}
 
-	// Validate JSON
-	if err := utils.Validate.Struct(payload); err != nil {
-		errors := err.(validator.ValidationErrors)
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error validating payload: %v", errors))
-		return
-	}
+// 	// Validate JSON
+// 	if err := utils.Validate.Struct(payload); err != nil {
+// 		errors := err.(validator.ValidationErrors)
+// 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error validating payload: %v", errors))
+// 		return
+// 	}
 
-	// Update item sold record by id
-	err = h.store.UpdateItemSold(types.SoldItem{
-		PaymentStatus: payload.PaymentStatus,
-		Journal: payload.Journal,
-		ID: payload.ID,
-	})
-	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error updating item: %v", err))
-		return
-	}
+// 	// Update item sold record by id
+// 	err = h.store.UpdateItemSold(types.SoldItem{
+// 		ID: payload.ID,
+// 	})
+// 	if err != nil {
+// 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error updating item: %v", err))
+// 		return
+// 	}
 
-	utils.WriteJSON(w, http.StatusCreated, "Sold item updated")
-}
+// 	utils.WriteJSON(w, http.StatusCreated, "Sold item updated")
+// }
 
 func (h *Handler) handleGetAllSoldItem (w http.ResponseWriter, r *http.Request) {
 	// Get limit, offset and search path parameters
@@ -581,6 +487,13 @@ func (h *Handler) handleGetItemsByInvoice (w http.ResponseWriter, r *http.Reques
 		return
     }
 
+	// Get invoice by id
+	invoice, err := h.store.GetInvoiceByID(invoice_id)
+	if err != nil{
+        utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error: %v", err))
+		return
+    }
+
 	// Get items by invoice
 	items, err := h.store.GetItemsByInvoice(invoice_id)
 	if err != nil {
@@ -593,6 +506,8 @@ func (h *Handler) handleGetItemsByInvoice (w http.ResponseWriter, r *http.Reques
 	} else {
 		response := types.InvoiceItemsResponse {
 			SoldItems: items,
+			InvoiceStr: invoice.InvoiceStr,
+			OnlineShop: invoice.OnlineShop,
 		}
 	
 		utils.WriteJSON(w, http.StatusOK, response)
@@ -669,4 +584,87 @@ func (h *Handler) handleGetItemTypeCount (w http.ResponseWriter, r *http.Request
 	}
 
 	utils.WriteJSON(w, http.StatusOK, counts)
+}
+
+func (h *Handler) handleEditInvoice (w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	rfid_tag_str := vars["id"]
+
+	rfid_tag, err := strconv.Atoi(rfid_tag_str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error: %v", err))
+		return
+	}
+
+	var payload types.EditInvoice
+	err = utils.ParseJSON(r, &payload) 
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error parsing JSON: %v", err))
+		return
+	}
+
+	err = h.store.EditInvoice(rfid_tag, payload)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error: %v", err))
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, "Invoice updated")
+}
+
+func (h *Handler) handleDeleteInvoice (w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	invoice_id_str := vars["id"]
+
+	invoice_id, err := strconv.Atoi(invoice_id_str)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error: %v", err))
+		return
+	}
+
+	items, err := h.store.GetItemsByInvoice(invoice_id)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error1: %v", err))
+		return
+	}
+
+	if len(items) == 0 {
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("no items found for invoice %d", invoice_id))
+		return
+	}
+
+	ctx := r.Context()
+	tx, err := h.store.BeginTransaction(ctx)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error: %v", err))
+		return
+	}
+
+	defer func() {	
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				log.Printf("failed to rollback transaction: %v", rbErr)
+				return
+			}
+			return
+		}
+		if commitErr := tx.Commit(); commitErr != nil {
+			log.Printf("failed to commit transaction: %v", commitErr)
+			return
+		}
+	}()
+
+	err = h.store.DeleteInvoice(invoice_id, tx, ctx)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error2: %v", err))
+		return
+	}
+
+	err = h.store.ResetItemsToNotSold(items, tx, ctx)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("error3: %v", err))
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, "Invoice deleted")
 }
