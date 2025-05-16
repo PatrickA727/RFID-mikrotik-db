@@ -4,10 +4,11 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"github.com/rs/cors"
+
 	"github.com/PatrickA727/mikrotik-db-sys/services/item"
 	"github.com/PatrickA727/mikrotik-db-sys/services/user"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 type APIServer struct {
@@ -24,7 +25,7 @@ func NewAPIServer(listenAddr string, db *sql.DB) *APIServer {
 
 func (s *APIServer) Run() error {
 	c := cors.New(cors.Options{
-        AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:3000"},
+        AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:3000","https://localhost:443","https://localhost"},
         AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
         AllowedHeaders:   []string{"Origin", "Content-Type", "Authorization", "ngrok-skip-browser-warning"},
         AllowCredentials: true,  // Important for cookie authentication

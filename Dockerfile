@@ -12,7 +12,7 @@
     COPY . .
     
     # Build the Go app (output binary named 'app')
-    RUN go build -o app .
+    RUN go build -o app ./cmd
     
     # Uses distroless(lightweight) debian as the os for the image
     FROM gcr.io/distroless/base-debian12 AS runner
@@ -26,7 +26,7 @@
     COPY --from=builder /app/app .
     
     # Expose the application port
-    EXPOSE 5000
+    EXPOSE 8080
     
     # Run the binary
     CMD ["./app"]
