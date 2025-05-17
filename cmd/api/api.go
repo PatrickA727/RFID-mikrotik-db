@@ -25,7 +25,7 @@ func NewAPIServer(listenAddr string, db *sql.DB) *APIServer {
 
 func (s *APIServer) Run() error {
 	c := cors.New(cors.Options{
-        AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:3000","https://localhost:443","https://localhost"},
+        AllowedOrigins:   []string{"http://localhost:5173","http://moengoet-inventory.my.id","https://app.moengoet-inventory.my.id", "http://localhost:3000","https://localhost:443","https://localhost"},
         AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
         AllowedHeaders:   []string{"Origin", "Content-Type", "Authorization", "ngrok-skip-browser-warning"},
         AllowCredentials: true,  // Important for cookie authentication
