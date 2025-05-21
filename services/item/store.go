@@ -394,7 +394,7 @@ func (s *Store) ShipItem(item_id int, tx *sql.Tx, ctx context.Context) error {
 func (s *Store) GetItemsByInvoice (invoice_id int) ([]types.SoldItem, error) {
 	var items []types.SoldItem
 
-	rows, err := s.db.Query(`SELECT i.id, i.rfid_tag, i.type_ref 
+	rows, err := s.db.Query(`SELECT i.id, i.rfid_tag, i.serial_number, i.type_ref 
 							FROM sold_items s JOIN items i ON s.item_id = i.id
 							WHERE s.invoice_id = $1`, invoice_id);
 	if err != nil {
@@ -405,7 +405,7 @@ func (s *Store) GetItemsByInvoice (invoice_id int) ([]types.SoldItem, error) {
 	for rows.Next() {
 		var item types.SoldItem
 
-		if err = rows.Scan(&item.ID, &item.ItemTag, &item.ItemType); err != nil {
+		if err = rows.Scan(&item.ID, &item.ItemTag, &item.ItemSN, &item.ItemType); err != nil {
 			return nil, err
 		}
 
