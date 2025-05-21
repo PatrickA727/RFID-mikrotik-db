@@ -26,7 +26,7 @@
     COPY --from=builder /app/app .
     
     # Expose the application port
-    EXPOSE 5000
+    EXPOSE 8080
     
     # Run the binary
     CMD ["./app"]
